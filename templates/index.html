@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>Product Intelligence Scraper</h1>
+            <p class="subtitle">Search and compare products across multiple e-commerce platforms</p>
+        </header>
+
+        <!-- Search Section -->
+        <section class="search-section">
+            <form id="searchForm" class="search-form">
+                <div class="search-input-wrapper">
+                    <input
+                        type="text"
+                        id="searchInput"
+                        name="query"
+                        placeholder="Enter product name (e.g., wireless headphones, laptop, phone case)"
+                        autocomplete="off"
+                        required
+                    >
+                    <button type="submit" id="searchBtn" class="btn btn-primary">
+                        <span class="btn-text">Search</span>
+                        <span class="btn-loading" style="display: none;">
+                            <span class="spinner"></span>
+                            Searching...
+                        </span>
+                    </button>
+                </div>
+
+                <!-- Source Filters -->
+                <div class="source-filters">
+                    <span class="filter-label">Sources:</span>
+                    <div class="checkbox-group" id="sourceCheckboxes">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Options -->
+                <div class="search-options">
+                    <label class="option">
+                        <span>Results per source:</span>
+                        <select id="maxResults">
+                            <option value="5">5</option>
+                            <option value="10" selected>10</option>
+                            <option value="20">20</option>
+                            <option value="30">30</option>
+                        </select>
+                    </label>
+                </div>
+            </form>
+        </section>
+
+        <!-- Results Section -->
+        <section class="results-section" id="resultsSection" style="display: none;">
+            <!-- Results Header -->
+            <div class="results-header">
+                <div class="results-info">
+                    <h2>Search Results</h2>
+                    <p id="resultsStats"></p>
+                </div>
+                <div class="export-buttons">
+                    <button class="btn btn-secondary" id="exportJsonBtn">Export JSON</button>
+                    <button class="btn btn-secondary" id="exportCsvBtn">Export CSV</button>
+                </div>
+            </div>
+
+            <!-- Errors (if any) -->
+            <div id="errorsContainer" class="errors-container" style="display: none;">
+                <h3>Warnings</h3>
+                <ul id="errorsList"></ul>
+            </div>
+
+            <!-- Results Table -->
+            <div class="table-container">
+                <table id="resultsTable" class="results-table">
+                    <thead>
+                        <tr>
+                            <th class="col-image">Image</th>
+                            <th class="col-product sortable" data-sort="title">Product</th>
+                            <th class="col-source sortable" data-sort="source">Source</th>
+                            <th class="col-price sortable" data-sort="price">Price</th>
+                            <th class="col-discount sortable" data-sort="discount">Discount</th>
+                            <th class="col-rating sortable" data-sort="rating">Rating</th>
+                            <th class="col-availability sortable" data-sort="availability">Availability</th>
+                            <th class="col-actions">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                        <!-- Populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Empty State -->
+        <section class="empty-state" id="emptyState">
+            <div class="empty-icon">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="M21 21l-4.35-4.35"/>
+                </svg>
+            </div>
+            <h3>Start Your Search</h3>
+            <p>Enter a product name above to search across multiple e-commerce platforms</p>
+        </section>
+
+        <!-- No Results State -->
+        <section class="no-results" id="noResults" style="display: none;">
+            <div class="empty-icon">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M9.172 9.172a4 4 0 015.656 5.656M15 9l-6 6"/>
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="M21 21l-4.35-4.35"/>
+                </svg>
+            </div>
+            <h3>No Products Found</h3>
+            <p>Try a different search term or check selected sources</p>
+        </section>
+
+        <!-- Loading State -->
+        <section class="loading-state" id="loadingState" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Searching across multiple sources...</p>
+            <p class="loading-detail" id="loadingDetail">This may take a few moments</p>
+        </section>
+
+        <!-- Error State -->
+        <section class="error-state" id="errorState" style="display: none;">
+            <div class="error-icon">!</div>
+            <h3>Something went wrong</h3>
+            <p id="errorMessage">Unable to complete the search. Please try again.</p>
+            <button class="btn btn-primary" onclick="location.reload()">Retry</button>
+        </section>
+
+        <!-- Product Detail Modal -->
+        <div class="modal" id="productModal">
+            <div class="modal-content">
+                <button class="modal-close" id="modalClose">&times;</button>
+                <div class="modal-body" id="modalBody">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Product Intelligence Scraper v1.0.0</p>
+            <p class="footer-links">
+                <a href="/api/docs" target="_blank">API Documentation</a>
+                <span class="separator">|</span>
+                <a href="/health" target="_blank">Health Check</a>
+            </p>
+        </footer>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
