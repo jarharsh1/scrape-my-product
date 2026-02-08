@@ -431,6 +431,59 @@ body {
 .source-ebay { background: #e53238; color: #fff; }
 .source-bestbuy { background: #0046be; color: #fff; }
 .source-walmart { background: #0071dc; color: #fff; }
+.source-flipkart { background: #2874f0; color: #fff; }
+.source-snapdeal { background: #ff3f4f; color: #fff; }
+.source-reliancedigital { background: #d6001c; color: #fff; }
+.source-croma { background: #e71b25; color: #fff; }
+.source-tatacliq { background: #2874a0; color: #fff; }
+
+/* Source Category */
+.source-category {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.source-category:last-child {
+    margin-bottom: 0;
+}
+
+.category-label {
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-right: 4px;
+}
+
+.source-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: var(--background);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 0.85rem;
+}
+
+.source-label:hover {
+    background: var(--border-color);
+}
+
+.source-label input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    accent-color: var(--primary-color);
+}
+
+.source-name {
+    font-weight: 500;
+}
 
 /* Price */
 .price-current {
@@ -672,7 +725,7 @@ body {
     color: var(--text-secondary);
 }
 
-/* Footer */
+/* Responsive Design */
 .footer {
     text-align: center;
     padding: 40px 20px;
@@ -698,7 +751,171 @@ body {
     color: var(--border-color);
 }
 
-/* Responsive Design */
+/* ===================================
+   COMPARISON TABLE STYLES
+   =================================== */
+
+.comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.comparison-table th,
+.comparison-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+}
+
+.comparison-table th {
+    background: var(--background);
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+}
+
+.comparison-table th.source-amazon { background: #fff8e6; }
+.comparison-table th.source-ebay { background: #ffeaea; }
+.comparison-table th.source-bestbuy { background: #e6f0ff; }
+.comparison-table th.source-flipkart { background: #e6efff; }
+.comparison-table th.source-snapdeal { background: #ffe6e8; }
+.comparison-table th.source-reliancedigital { background: #ffe6e8; }
+.comparison-table th.source-croma { background: #ffe6e8; }
+.comparison-table th.source-tatacliq { background: #e6f0ff; }
+
+.comparison-table tbody tr:hover {
+    background: var(--background);
+}
+
+.comparison-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Product column */
+.comparison-table .col-product {
+    min-width: 200px;
+    max-width: 300px;
+}
+
+.comparison-table .col-image-header {
+    width: 70px;
+}
+
+.comparison-table .col-image {
+    width: 70px;
+    text-align: center;
+}
+
+.comparison-table .col-price {
+    min-width: 140px;
+    text-align: center;
+}
+
+/* Product cell */
+.comparison-table .product-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.4;
+}
+
+.comparison-table .product-brand {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.comparison-table .product-image {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+    border-radius: 4px;
+    background: var(--background);
+}
+
+.comparison-table .image-placeholder {
+    width: 60px;
+    height: 60px;
+    background: var(--border-color);
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+}
+
+/* Price link cell */
+.comparison-table .price-link-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.comparison-table .price-value {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.comparison-table .original-price {
+    text-decoration: line-through;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
+.comparison-table .discount-badge {
+    background: #dcfce7;
+    color: #166534;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.comparison-table .not-available {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
+.comparison-table .price-na {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.comparison-table .view-link {
+    display: inline-block;
+    padding: 4px 12px;
+    background: var(--primary-color);
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-top: 4px;
+    transition: var(--transition);
+}
+
+.comparison-table .view-link:hover {
+    background: var(--primary-hover);
+}
+
+/* Source-specific column headers */
+.comparison-table th.source-amazon { color: #e67e00; }
+.comparison-table th.source-ebay { color: #e53238; }
+.comparison-table th.source-bestbuy { color: #0046be; }
+.comparison-table th.source-flipkart { color: #2874f0; }
+.comparison-table th.source-snapdeal { color: #ff3f4f; }
+.comparison-table th.source-reliancedigital { color: #d6001c; }
+.comparison-table th.source-croma { color: #e71b25; }
+.comparison-table th.source-tatacliq { color: #2874a0; }
+
+/* Responsive */
 @media (max-width: 768px) {
     .container {
         padding: 12px;

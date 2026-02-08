@@ -12,11 +12,21 @@ from app.scrapers.base import BaseScraper
 from app.scrapers.amazon import AmazonScraper
 from app.scrapers.ebay import EbayScraper
 from app.scrapers.bestbuy import BestBuyScraper
+from app.scrapers.flipkart import FlipkartScraper
+from app.scrapers.snapdeal import SnapdealScraper
+from app.scrapers.reliancedigital import RelianceDigitalScraper
+from app.scrapers.croma import CromaScraper
+from app.scrapers.tatacliq import TataCliqScraper
 from app.scrapers.demo import (
     DemoAmazonScraper,
     DemoEbayScraper,
     DemoBestBuyScraper,
-    DemoWalmartScraper
+    DemoWalmartScraper,
+    DemoFlipkartScraper,
+    DemoSnapdealScraper,
+    DemoRelianceDigitalScraper,
+    DemoCromaScraper,
+    DemoTataCliqScraper
 )
 from app.models.product import Product, ProductSearchResult
 from app.config import config
@@ -33,6 +43,12 @@ class ScraperRegistry:
         "amazon": AmazonScraper,
         "ebay": EbayScraper,
         "bestbuy": BestBuyScraper,
+        # Indian e-commerce scrapers
+        "flipkart": FlipkartScraper,
+        "snapdeal": SnapdealScraper,
+        "reliancedigital": RelianceDigitalScraper,
+        "croma": CromaScraper,
+        "tatacliq": TataCliqScraper,
     })
 
     # Demo scrapers for testing
@@ -41,6 +57,12 @@ class ScraperRegistry:
         "ebay": DemoEbayScraper,
         "bestbuy": DemoBestBuyScraper,
         "walmart": DemoWalmartScraper,
+        # Indian e-commerce demo scrapers
+        "flipkart": DemoFlipkartScraper,
+        "snapdeal": DemoSnapdealScraper,
+        "reliancedigital": DemoRelianceDigitalScraper,
+        "croma": DemoCromaScraper,
+        "tatacliq": DemoTataCliqScraper,
     })
 
 
@@ -55,13 +77,13 @@ class ScraperManager:
     - Caching (optional)
     """
 
-    def __init__(self, use_demo_scrapers: bool = True):
+    def __init__(self, use_demo_scrapers: bool = False):
         """
         Initialize the scraper manager.
 
         Args:
             use_demo_scrapers: If True, use demo scrapers instead of real ones.
-                             Recommended for development and testing.
+                             Set to False to scrape real websites.
         """
         self.registry = ScraperRegistry()
         self.use_demo_scrapers = use_demo_scrapers
@@ -225,8 +247,12 @@ class ScraperManager:
 _manager: Optional[ScraperManager] = None
 
 
-def get_scraper_manager(use_demo: bool = True) -> ScraperManager:
-    """Get or create the global scraper manager instance."""
+def get_scraper_manager(use_demo: bool = False) -> ScraperManager:
+    """Get or create the global scraper manager instance.
+    
+    Args:
+        use_demo: Set True to use demo scrapers, False for real scrapers.
+    """
     global _manager
     if _manager is None:
         _manager = ScraperManager(use_demo_scrapers=use_demo)

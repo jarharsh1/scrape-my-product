@@ -4,13 +4,31 @@ A powerful, modular web scraping application for gathering product information f
 
 ## Features
 
-- **Multi-Source Search**: Search products across Amazon, eBay, Best Buy, and Walmart simultaneously
+- **Multi-Source Search**: Search products across 9 e-commerce platforms simultaneously
+- **Indian E-commerce Support**: Dedicated scrapers for Flipkart, Snapdeal, Reliance Digital, Croma, and Tata Cliq
+- **Price Comparison**: Compare prices across all sites in a single table view
+- **INR Currency**: All prices displayed in Indian Rupees (₹)
 - **Structured Data Extraction**: Extract product title, price, discount, availability, ratings, specifications, images, and more
 - **Data Normalization**: Clean and standardize data from different sources
 - **Export Options**: Download results as JSON or CSV
 - **Rate Limiting**: Built-in rate limiting to prevent overwhelming target sites
 - **Modular Architecture**: Easy to add new scrapers or integrate as an API module
-- **Professional UI**: Clean, responsive interface with loading states and error handling
+- **Professional UI**: Clean, responsive interface with comparison table view
+
+## Supported E-commerce Sites
+
+### International Sites
+- Amazon
+- eBay
+- Best Buy
+- Walmart
+
+### Indian Sites
+- Flipkart
+- Snapdeal
+- Reliance Digital
+- Croma
+- Tata Cliq
 
 ## Project Structure
 
@@ -29,6 +47,11 @@ scrape-my-product/
 │   │   ├── amazon.py        # Amazon scraper
 │   │   ├── ebay.py          # eBay scraper
 │   │   ├── bestbuy.py       # Best Buy scraper
+│   │   ├── flipkart.py      # Flipkart scraper
+│   │   ├── snapdeal.py      # Snapdeal scraper
+│   │   ├── reliancedigital.py  # Reliance Digital scraper
+│   │   ├── croma.py         # Croma scraper
+│   │   ├── tatacliq.py      # Tata Cliq scraper
 │   │   ├── demo.py          # Demo scrapers for testing
 │   │   └── manager.py       # Scraper orchestration manager
 │   ├── models/
@@ -102,12 +125,20 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
 ### Web Interface
 
 1. Open your browser and navigate to `http://localhost:8000`
-2. Enter a product name in the search box (e.g., "wireless headphones")
-3. Select which sources to search (all selected by default)
+2. Enter a product name in the search box (e.g., "Samsung S24 Ultra")
+3. Select which sources to search (International or Indian sites)
 4. Click "Search" and wait for results
-5. View results in the table, click columns to sort
-6. Double-click a row to see product details
+5. View results in the comparison table - one row per product with price columns for each site
+6. Click "View" to open the product page on the respective site
 7. Export results as JSON or CSV using the export buttons
+
+### Comparison Table View
+
+The results are displayed in a comparison table format:
+
+| Product | Amazon | Flipkart | Reliance Digital | Croma |
+|---------|--------|----------|------------------|-------|
+| Samsung S24 Ultra | ₹65,000 [View] | ₹62,999 [View] | ₹64,500 [View] | ₹66,000 [View] |
 
 ### API Endpoints
 
@@ -127,12 +158,12 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
 ```bash
 curl -X POST "http://localhost:8000/api/products/search" \
   -H "Content-Type: application/json" \
-  -d '{"query": "wireless headphones", "sources": ["amazon", "ebay"], "max_results": 10}'
+  -d '{"query": "Samsung S24 Ultra", "sources": ["flipkart", "amazon", "reliancedigital"], "max_results": 10}'
 ```
 
 **Search products (GET)**:
 ```bash
-curl "http://localhost:8000/api/products/search?q=wireless+headphones&sources=amazon,ebay&max_results=10"
+curl "http://localhost:8000/api/products/search?q=Samsung+S24+Ultra&sources=flipkart,amazon&max_results=10"
 ```
 
 **Export as JSON**:
@@ -175,11 +206,17 @@ By default, the application uses **demo scrapers** that return simulated product
 - Demonstrations
 - Avoiding rate limiting issues
 
+The demo mode includes realistic Indian product templates with:
+- Samsung, Xiaomi, OnePlus, Realme smartphones (₹10,000 - ₹1,50,000)
+- HP, Dell, Lenovo, ASUS laptops (₹40,000 - ₹1,50,000)
+- boAt, JBL, Sony headphones (₹500 - ₹30,000)
+- Samsung, LG, Sony TVs (₹30,000 - ₹2,00,000)
+
 To use **real scrapers** that fetch from actual e-commerce sites:
 
 1. Edit `app/scrapers/manager.py`:
    ```python
-   def get_scraper_manager(use_demo: bool = False) -> ScraperManager:  # Change to False
+   def get_scraper_manager(use_demo: bool = False) -> ScraperManager:
    ```
 
 2. Note: Real scrapers may be blocked by some e-commerce sites. Consider using:
@@ -189,20 +226,20 @@ To use **real scrapers** that fetch from actual e-commerce sites:
 
 ## Adding a New Scraper
 
-1. Create a new file in `app/scrapers/` (e.g., `newegg.py`):
+1. Create a new file in `app/scrapers/` (e.g., `myntra.py`):
 
 ```python
 from app.scrapers.base import BaseScraper
 from app.models.product import Product
 
-class NeweggScraper(BaseScraper):
+class MyntraScraper(BaseScraper):
     @property
     def source_name(self) -> str:
-        return "newegg"
+        return "myntra"
 
     @property
     def base_url(self) -> str:
-        return "https://www.newegg.com"
+        return "https://www.myntra.com"
 
     async def search(self, query: str, max_results: int = 10) -> list[Product]:
         # Implement scraping logic
@@ -212,13 +249,13 @@ class NeweggScraper(BaseScraper):
 2. Register the scraper in `app/scrapers/manager.py`:
 
 ```python
-from app.scrapers.newegg import NeweggScraper
+from app.scrapers.myntra import MyntraScraper
 
 @dataclass
 class ScraperRegistry:
     real_scrapers: Dict[str, Type[BaseScraper]] = field(default_factory=lambda: {
         # ... existing scrapers ...
-        "newegg": NeweggScraper,
+        "myntra": MyntraScraper,
     })
 ```
 
@@ -231,9 +268,9 @@ The `Product` model includes the following fields:
 | title | str | Product title |
 | source | str | Source website name |
 | url | str | Product page URL |
-| price | float | Current price |
+| price | float | Current price (in INR for Indian sites) |
 | original_price | float | Original price (before discount) |
-| currency | str | Currency code (default: USD) |
+| currency | str | Currency code (INR/USD) |
 | discount_percent | float | Discount percentage |
 | availability | enum | IN_STOCK, OUT_OF_STOCK, LIMITED, PRE_ORDER, UNKNOWN |
 | rating | float | Rating out of 5 |
@@ -259,14 +296,14 @@ manager = ScraperManager(use_demo_scrapers=True)
 
 # Search for products
 result = await manager.search(
-    query="laptop",
-    sources=["amazon", "ebay"],
+    query="Samsung S24 Ultra",
+    sources=["flipkart", "amazon", "reliancedigital"],
     max_results_per_source=10
 )
 
 # Access results
 for product in result.products:
-    print(f"{product.title}: ${product.price}")
+    print(f"{product.title}: ₹{product.price}")
 ```
 
 ### Key Components

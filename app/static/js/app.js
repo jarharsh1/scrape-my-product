@@ -7,8 +7,8 @@ const state = {
     products: [],
     query: '',
     sources: [],
-    sortColumn: null,
-    sortDirection: 'asc'
+    groupedProducts: {},
+    activeSources: []
 };
 
 // DOM Elements
@@ -44,6 +44,19 @@ const API = {
     exportCsv: '/api/products/export/csv'
 };
 
+// Source display names mapping
+const SOURCE_NAMES = {
+    'amazon': 'Amazon',
+    'ebay': 'eBay',
+    'bestbuy': 'Best Buy',
+    'walmart': 'Walmart',
+    'flipkart': 'Flipkart',
+    'snapdeal': 'Snapdeal',
+    'reliancedigital': 'Reliance Digital',
+    'croma': 'Croma',
+    'tatacliq': 'Tata Cliq'
+};
+
 /**
  * Initialize the application
  */
@@ -64,8 +77,8 @@ async function loadSources() {
         renderSourceCheckboxes(data.sources);
     } catch (error) {
         console.error('Failed to load sources:', error);
-        // Use default sources
-        const defaultSources = ['amazon', 'ebay', 'bestbuy', 'walmart'];
+        const defaultSources = ['amazon', 'ebay', 'bestbuy', 'flipkart', 'snapdeal', 'reliancedigital', 'croma', 'tatacliq'];
+        state.sources = defaultSources;
         renderSourceCheckboxes(defaultSources);
     }
 }
@@ -74,40 +87,108 @@ async function loadSources() {
  * Render source checkboxes
  */
 function renderSourceCheckboxes(sources) {
-    elements.sourceCheckboxes.innerHTML = sources.map(source => `
-        <label>
-            <input type="checkbox" name="source" value="${source}" checked>
-            ${capitalizeFirst(source)}
-        </label>
-    `).join('');
+    const indianSources = ['flipkart', 'snapdeal', 'reliancedigital', 'croma', 'tatacliq'];
+    
+    const grouped = {
+        'International Sites': [],
+        'Indian Sites': []
+    };
+
+    sources.forEach(source => {
+        if (indianSources.includes(source)) {
+            grouped['Indian Sites'].push(source);
+        } else {
+            grouped['International Sites'].push(source);
+        }
+    });
+
+    let html = '';
+
+    for (const [category, categorySources] of Object.entries(grouped)) {
+        if (categorySources.length > 0) {
+            html += `<div class="source-category"><span class="category-label">${category}</span>`;
+            html += categorySources.map(source => `
+                <label class="source-label">
+                    <input type="checkbox" name="source" value="${source}" checked>
+                    <span class="source-name">${SOURCE_NAMES[source] || capitalizeFirst(source)}</span>
+                </label>
+            `).join('');
+            html += `</div>`;
+        }
+    }
+
+    elements.sourceCheckboxes.innerHTML = html;
 }
 
 /**
  * Setup event listeners
  */
 function setupEventListeners() {
-    // Search form submission
     elements.searchForm.addEventListener('submit', handleSearch);
-
-    // Export buttons
     elements.exportJsonBtn.addEventListener('click', () => exportResults('json'));
     elements.exportCsvBtn.addEventListener('click', () => exportResults('csv'));
-
-    // Modal close
     elements.modalClose.addEventListener('click', closeModal);
     elements.productModal.addEventListener('click', (e) => {
         if (e.target === elements.productModal) closeModal();
     });
-
-    // Keyboard events
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closeModal();
     });
+}
 
-    // Table sorting
-    document.querySelectorAll('.sortable').forEach(th => {
-        th.addEventListener('click', () => handleSort(th.dataset.sort));
+/**
+ * Normalize product title for grouping
+ */
+function normalizeTitle(title) {
+    // Remove common variations to group similar products
+    return title
+        .toLowerCase()
+        .replace(/\d+\s*(pro|plus|max|lite|se|ultra|5g|lte|2nd gen|3rd gen|4th gen)/gi, '')
+        .replace(/[™®©]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+/**
+ * Extract base product name
+ */
+function getBaseProductName(title) {
+    // Extract the main product name (e.g., "Samsung Galaxy S24 Ultra")
+    const parts = title.split(' - ');
+    return parts[0].trim();
+}
+
+/**
+ * Group products by normalized title
+ */
+function groupProductsByName(products) {
+    const grouped = {};
+    
+    products.forEach(product => {
+        const baseName = getBaseProductName(product.title);
+        const normalized = normalizeTitle(baseName);
+        
+        if (!grouped[normalized]) {
+            grouped[normalized] = {
+                name: baseName,
+                image: product.image_url,
+                brand: product.brand,
+                sources: {}
+            };
+        }
+        
+        grouped[normalized].sources[product.source] = {
+            price: product.price,
+            originalPrice: product.original_price,
+            currency: product.currency,
+            discount: product.discount_percent,
+            url: product.url,
+            availability: product.availability,
+            rating: product.rating
+        };
     });
+    
+    return Object.values(grouped);
 }
 
 /**
@@ -121,14 +202,14 @@ async function handleSearch(e) {
 
     state.query = query;
 
-    // Get selected sources
     const checkedSources = Array.from(
         document.querySelectorAll('input[name="source"]:checked')
     ).map(cb => cb.value);
+    
+    state.activeSources = checkedSources;
 
     const maxResults = parseInt(elements.maxResults.value);
 
-    // Show loading state
     showState('loading');
     setLoadingState(true);
 
@@ -151,18 +232,17 @@ async function handleSearch(e) {
 
         const data = await response.json();
 
+        // Group products by name
+        state.groupedProducts = groupProductsByName(data.products);
         state.products = data.products;
-        state.sortColumn = null;
-        state.sortDirection = 'asc';
 
-        if (data.products.length === 0) {
+        if (state.groupedProducts.length === 0) {
             showState('noResults');
         } else {
             renderResults(data);
             showState('results');
         }
 
-        // Show errors if any
         if (Object.keys(data.errors).length > 0) {
             showErrors(data.errors);
         }
@@ -177,131 +257,127 @@ async function handleSearch(e) {
 }
 
 /**
- * Render search results
+ * Render search results - Comparison Table
  */
 function renderResults(data) {
-    // Update stats
+    const sourcesCount = new Set();
+    Object.values(state.groupedProducts).forEach(p => {
+        Object.keys(p.sources).forEach(s => sourcesCount.add(s));
+    });
+    
     elements.resultsStats.textContent =
-        `Found ${data.total_results} products from ${data.sources_searched.length} sources in ${data.search_time_seconds.toFixed(2)}s`;
+        `Found ${state.groupedProducts.length} unique products from ${sourcesCount.size} sites in ${data.search_time_seconds.toFixed(2)}s`;
 
-    // Render table
-    renderProductTable(data.products);
+    renderComparisonTable();
 }
 
 /**
- * Render product table
+ * Render comparison table with one row per product
  */
-function renderProductTable(products) {
-    elements.resultsBody.innerHTML = products.map((product, index) => `
-        <tr data-index="${index}">
-            <td class="col-image">
-                ${product.image_url
-                    ? `<img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.title)}" class="product-image" onerror="this.outerHTML='<div class=\\'product-image-placeholder\\'>No Image</div>'">`
-                    : '<div class="product-image-placeholder">No Image</div>'
-                }
-            </td>
-            <td class="col-product">
-                <div class="product-title">${escapeHtml(product.title)}</div>
-                ${product.brand ? `<div class="product-brand">${escapeHtml(product.brand)}</div>` : ''}
-            </td>
-            <td class="col-source">
-                <span class="source-badge source-${product.source}">${capitalizeFirst(product.source)}</span>
-            </td>
-            <td class="col-price">
-                ${product.price !== null
-                    ? `<div class="price-current">${formatCurrency(product.price, product.currency)}</div>
-                       ${product.original_price ? `<div class="price-original">${formatCurrency(product.original_price, product.currency)}</div>` : ''}`
-                    : '<span class="text-secondary">N/A</span>'
-                }
-            </td>
-            <td class="col-discount">
-                ${product.discount_percent
-                    ? `<span class="discount-badge">-${product.discount_percent}%</span>`
-                    : '-'
-                }
-            </td>
-            <td class="col-rating">
-                ${product.rating !== null
-                    ? `<div class="rating-stars">${renderStars(product.rating)}<span class="rating-value">${product.rating}</span></div>
-                       ${product.rating_count ? `<div class="rating-count">(${formatNumber(product.rating_count)})</div>` : ''}`
-                    : '-'
-                }
-            </td>
-            <td class="col-availability">
-                <span class="availability-badge availability-${product.availability}">
-                    ${formatAvailability(product.availability)}
-                </span>
-            </td>
-            <td class="col-actions">
-                <a href="${escapeHtml(product.url)}" target="_blank" rel="noopener" class="action-btn">View</a>
-            </td>
-        </tr>
-    `).join('');
+function renderComparisonTable() {
+    const sources = state.activeSources;
+    
+    let html = `
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th class="col-product">Product</th>
+                    <th class="col-image-header">Image</th>
+                    ${sources.map(source => `
+                        <th class="col-price source-${source}">${SOURCE_NAMES[source] || capitalizeFirst(source)}</th>
+                    `).join('')}
+                </tr>
+            </thead>
+            <tbody>
+    `;
 
-    // Add click handlers for detail view
-    elements.resultsBody.querySelectorAll('tr').forEach(row => {
-        row.addEventListener('dblclick', () => {
-            const index = parseInt(row.dataset.index);
-            showProductDetail(state.products[index]);
-        });
+    state.groupedProducts.forEach((product, index) => {
+        html += `
+            <tr data-index="${index}">
+                <td class="col-product">
+                    <div class="product-name">${escapeHtml(product.name)}</div>
+                    ${product.brand ? `<div class="product-brand">${escapeHtml(product.brand)}</div>` : ''}
+                </td>
+                <td class="col-image">
+                    ${product.image 
+                        ? `<img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" class="product-image" onerror="this.style.display='none'">`
+                        : '<div class="image-placeholder">No Image</div>'
+                    }
+                </td>
+                ${sources.map(source => {
+                    const sourceData = product.sources[source];
+                    if (!sourceData) {
+                        return `<td class="col-price source-${source}"><span class="not-available">Not Available</span></td>`;
+                    }
+                    return `
+                        <td class="col-price source-${source}">
+                            <div class="price-link-cell">
+                                ${sourceData.price !== null 
+                                    ? `<div class="price-value">${formatCurrency(sourceData.price, sourceData.currency)}</div>`
+                                    : '<span class="price-na">N/A</span>'
+                                }
+                                ${sourceData.originalPrice 
+                                    ? `<div class="original-price">${formatCurrency(sourceData.originalPrice, sourceData.currency)}</div>`
+                                    : ''
+                                }
+                                ${sourceData.discount 
+                                    ? `<div class="discount-badge">-${sourceData.discount}%</div>`
+                                    : ''
+                                }
+                                <a href="${escapeHtml(sourceData.url)}" target="_blank" rel="noopener" class="view-link">
+                                    View
+                                </a>
+                            </div>
+                        </td>
+                    `;
+                }).join('')}
+            </tr>
+        `;
     });
+
+    html += `
+            </tbody>
+        </table>
+    `;
+
+    elements.resultsBody.innerHTML = html;
 }
 
 /**
  * Handle table sorting
  */
 function handleSort(column) {
-    // Toggle direction if same column
-    if (state.sortColumn === column) {
-        state.sortDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
-    } else {
-        state.sortColumn = column;
-        state.sortDirection = 'asc';
-    }
+    // Sort grouped products
+    const sorted = [...state.groupedProducts].sort((a, b) => {
+        // Get lowest price from any source for comparison
+        const getLowestPrice = (p) => {
+            const prices = Object.values(p.sources)
+                .map(s => s.price)
+                .filter(p => p !== null);
+            return prices.length > 0 ? Math.min(...prices) : null;
+        };
 
-    // Sort products
-    const sorted = [...state.products].sort((a, b) => {
-        let aVal = getSortValue(a, column);
-        let bVal = getSortValue(b, column);
+        let aVal, bVal;
 
-        if (aVal === null) return 1;
-        if (bVal === null) return -1;
-
-        if (typeof aVal === 'string') {
-            aVal = aVal.toLowerCase();
-            bVal = bVal.toLowerCase();
+        if (column === 'price') {
+            aVal = getLowestPrice(a);
+            bVal = getLowestPrice(b);
+            if (aVal === null) return 1;
+            if (bVal === null) return -1;
+        } else if (column === 'name') {
+            aVal = a.name.toLowerCase();
+            bVal = b.name.toLowerCase();
+        } else {
+            return 0;
         }
 
-        if (aVal < bVal) return state.sortDirection === 'asc' ? -1 : 1;
-        if (aVal > bVal) return state.sortDirection === 'asc' ? 1 : -1;
+        if (aVal < bVal) return 1;
+        if (aVal > bVal) return -1;
         return 0;
     });
 
-    // Update table
-    renderProductTable(sorted);
-
-    // Update header styles
-    document.querySelectorAll('.sortable').forEach(th => {
-        th.classList.remove('sort-asc', 'sort-desc');
-        if (th.dataset.sort === column) {
-            th.classList.add(`sort-${state.sortDirection}`);
-        }
-    });
-}
-
-/**
- * Get sort value for a product
- */
-function getSortValue(product, column) {
-    switch (column) {
-        case 'title': return product.title;
-        case 'source': return product.source;
-        case 'price': return product.price;
-        case 'discount': return product.discount_percent;
-        case 'rating': return product.rating;
-        case 'availability': return product.availability;
-        default: return null;
-    }
+    state.groupedProducts = sorted;
+    renderComparisonTable();
 }
 
 /**
@@ -327,66 +403,7 @@ async function exportResults(format) {
         ? `${API.exportJson}?${params}`
         : `${API.exportCsv}?${params}`;
 
-    // Trigger download
     window.location.href = url;
-}
-
-/**
- * Show product detail modal
- */
-function showProductDetail(product) {
-    const specsHtml = Object.keys(product.specifications).length > 0
-        ? `<div class="modal-specs">
-            <h4>Specifications</h4>
-            <table class="specs-table">
-                ${Object.entries(product.specifications).map(([key, value]) =>
-                    `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(value)}</td></tr>`
-                ).join('')}
-            </table>
-           </div>`
-        : '';
-
-    elements.modalBody.innerHTML = `
-        <div class="modal-product-header">
-            ${product.image_url
-                ? `<img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.title)}" class="modal-product-image">`
-                : '<div class="modal-product-image" style="background: var(--border-color); display: flex; align-items: center; justify-content: center;">No Image</div>'
-            }
-            <div class="modal-product-info">
-                <h3 class="modal-product-title">${escapeHtml(product.title)}</h3>
-                ${product.brand ? `<p style="color: var(--text-secondary); margin-bottom: 12px;">by ${escapeHtml(product.brand)}</p>` : ''}
-                ${product.price !== null
-                    ? `<div class="modal-product-price">${formatCurrency(product.price, product.currency)}</div>`
-                    : ''
-                }
-                ${product.original_price
-                    ? `<p style="text-decoration: line-through; color: var(--text-secondary);">Was ${formatCurrency(product.original_price, product.currency)}</p>`
-                    : ''
-                }
-                ${product.discount_percent
-                    ? `<span class="discount-badge" style="margin: 8px 0; display: inline-block;">Save ${product.discount_percent}%</span>`
-                    : ''
-                }
-                <p style="margin: 12px 0;">
-                    <span class="availability-badge availability-${product.availability}">
-                        ${formatAvailability(product.availability)}
-                    </span>
-                </p>
-                ${product.rating !== null
-                    ? `<p style="margin-top: 12px;">${renderStars(product.rating)} ${product.rating}/5 ${product.rating_count ? `(${formatNumber(product.rating_count)} reviews)` : ''}</p>`
-                    : ''
-                }
-                <p style="margin-top: 16px;">
-                    <a href="${escapeHtml(product.url)}" target="_blank" rel="noopener" class="btn btn-primary">
-                        View on ${capitalizeFirst(product.source)}
-                    </a>
-                </p>
-            </div>
-        </div>
-        ${specsHtml}
-    `;
-
-    elements.productModal.classList.add('active');
 }
 
 /**
@@ -401,7 +418,7 @@ function closeModal() {
  */
 function showErrors(errors) {
     elements.errorsList.innerHTML = Object.entries(errors)
-        .map(([source, message]) => `<li><strong>${capitalizeFirst(source)}:</strong> ${escapeHtml(message)}</li>`)
+        .map(([source, message]) => `<li><strong>${SOURCE_NAMES[source] || capitalizeFirst(source)}:</strong> ${escapeHtml(message)}</li>`)
         .join('');
     elements.errorsContainer.style.display = 'block';
 }
@@ -410,7 +427,6 @@ function showErrors(errors) {
  * Show a specific state
  */
 function showState(stateName) {
-    // Hide all states
     elements.resultsSection.style.display = 'none';
     elements.emptyState.style.display = 'none';
     elements.noResults.style.display = 'none';
@@ -418,7 +434,6 @@ function showState(stateName) {
     elements.errorState.style.display = 'none';
     elements.errorsContainer.style.display = 'none';
 
-    // Show requested state
     switch (stateName) {
         case 'empty':
             elements.emptyState.style.display = 'block';
@@ -471,7 +486,14 @@ function capitalizeFirst(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-function formatCurrency(amount, currency = 'USD') {
+function formatCurrency(amount, currency = 'INR') {
+    if (currency === 'INR') {
+        return new Intl.NumberFormat('en-IN', {
+            style: 'currency',
+            currency: 'INR',
+            maximumFractionDigits: 0
+        }).format(amount);
+    }
     return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: currency
@@ -488,16 +510,6 @@ function formatNumber(num) {
     return num.toString();
 }
 
-function renderStars(rating) {
-    const fullStars = Math.floor(rating);
-    const hasHalf = rating % 1 >= 0.5;
-    const emptyStars = 5 - fullStars - (hasHalf ? 1 : 0);
-
-    return '★'.repeat(fullStars) +
-           (hasHalf ? '½' : '') +
-           '☆'.repeat(emptyStars);
-}
-
 function formatAvailability(status) {
     const labels = {
         'in_stock': 'In Stock',
@@ -506,8 +518,8 @@ function formatAvailability(status) {
         'pre_order': 'Pre-Order',
         'unknown': 'Unknown'
     };
-    return labels[status] || status;
+    return labels[status] || 'Unknown';
 }
 
-// Initialize app when DOM is ready
-document.addEventListener('DOMContentLoaded', init);
+// Initialize the app
+init();
