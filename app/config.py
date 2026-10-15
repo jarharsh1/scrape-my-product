@@ -4,6 +4,7 @@ Configuration settings for the Product Intelligence Scraper.
 
 from dataclasses import dataclass, field
 from typing import Dict, List
+import os
 
 
 @dataclass
@@ -41,12 +42,12 @@ class AppConfig:
     """Main application configuration."""
 
     # Server settings
-    host: str = "0.0.0.0"
+    host: str = field(default_factory=lambda: os.getenv("HOST", "127.0.0.1"))
     port: int = 8000
-    debug: bool = True
+    debug: bool = field(default_factory=lambda: os.getenv("DEBUG", "false").lower() == "true")
 
     # CORS settings
-    cors_origins: List[str] = field(default_factory=lambda: ["*"])
+    cors_origins: List[str] = field(default_factory=lambda: [])
 
     # Scraper settings
     scraper: ScraperConfig = field(default_factory=ScraperConfig)

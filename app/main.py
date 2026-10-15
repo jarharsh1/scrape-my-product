@@ -3,6 +3,7 @@ Main FastAPI application for the Product Intelligence Scraper.
 """
 
 import logging
+from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -12,7 +13,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 
+load_dotenv()
+
 from app.routes import products_router
+from app.routes.compare import router as compare_router
 from app.scrapers.manager import shutdown_manager
 from app.config import config
 
@@ -68,15 +72,19 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 # Include API routes
 app.include_router(products_router)
+app.include_router(compare_router)
 
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     """Serve the main application page."""
-    return templates.TemplateResponse(
-        "index.html",
-        {"request": request, "title": "Product Intelligence Scraper"}
-    )
+    return templates.TemplateResponse(request=request, name="compare.html")
+
+
+@app.get("/legacy", response_class=HTMLResponse)
+async def legacy(request: Request):
+    return templates.TemplateResponse(request=request, name="index.html",
+                                     context={"title": "Product Intelligence Scraper"})
 
 
 @app.get("/health")

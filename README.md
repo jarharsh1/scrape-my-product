@@ -1,5 +1,20 @@
 # Product Intelligence Web Scraping Tool
 
+## Automatic comparison MVP
+
+The home page now accepts product names such as **Sony WH-1000XM5 vs Bose
+QuietComfort Ultra** and researches a sourced comparison across the web using
+Tavily and OpenAI. No product URLs or merchant selection are required.
+
+Run with Python **3.11+**, install `requirements.txt`, and launch `python run.py`.
+Open **http://127.0.0.1:8000** and add your API keys in **Connections**, or configure
+them using `.env.example`. Keys entered in the UI are kept only for the tab.
+Without keys the UI loads, but live research remains unavailable.
+
+See [IMPLEMENTATION.md](IMPLEMENTATION.md) for architecture, tests, and launch
+limitations. The original scraper UI is retained at `/legacy`; the documentation
+below describes that original tool.
+
 A powerful, modular web scraping application for gathering product information from multiple e-commerce sources. Built with Python (FastAPI) backend and vanilla HTML/CSS/JavaScript frontend.
 
 ## Features
