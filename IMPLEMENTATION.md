@@ -89,3 +89,8 @@ coverage require verification; arbitrary websites cannot be guaranteed.
 
 No actual provider requests are performed by the automated test suite. The
 first live evaluation needs both API keys.
+
+## Images, websites and advertising
+Product cards show matching image URLs extracted from source pages by Tavily, with source credit and a missing-image fallback. URL-name matching is heuristic, not visual identity verification. Research prefers distinct hostnames before filling duplicate-host sources. Every card lists its source website links.
+
+To enable AdSense integration, set ADSENSE_PUBLISHER_ID to your real ca-pub-16-digit ID and redeploy. This enables the Auto ads script and /ads.txt. Create and approve the site in AdSense, enable Auto ads and configure the required consent/privacy settings in that account before serving ads. No ad script loads while the ID is absent or invalid.

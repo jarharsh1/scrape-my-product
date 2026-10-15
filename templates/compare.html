@@ -7,6 +7,10 @@
   <title>Side by Side — A little clarity before you buy.</title>
   <link rel="stylesheet" href="/static/css/compare.css">
   <script src="/static/js/compare.js" defer></script>
+  {% if adsense_publisher_id %}
+  <meta name="google-adsense-account" content="{{ adsense_publisher_id }}">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={{ adsense_publisher_id }}" crossorigin="anonymous"></script>
+  {% endif %}
 </head>
 <body>
   <header class="site-header wrap">

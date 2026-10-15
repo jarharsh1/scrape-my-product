@@ -88,6 +88,7 @@ class Source(Contract):
     excerpt: str
     retrieved_at: str
     kind: Literal["page", "search_excerpt"]
+    image_urls: list[str] = []
 
 
 class ComparisonResult(ComparisonDraft):

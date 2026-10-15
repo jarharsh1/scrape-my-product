@@ -7,6 +7,7 @@ Tavily Extract, never fetched by this server, to avoid arbitrary server requests
 import asyncio
 import json
 import os
+import re
 from datetime import datetime, timezone
 from urllib.parse import urlsplit, urlunsplit
 
@@ -117,15 +118,27 @@ class ResearchService:
                 seen.add(url)
                 entries.append({"url": url, "title": item.get("title") or url, "content": content[:6000]})
         # At most six distinct sources and two full pages per product.
-        entries = entries[:6]
+        # Prefer distinct websites before filling remaining source slots.
+        unique, remaining, domains = [], [], set()
+        for entry in entries:
+            domain = urlsplit(entry["url"]).hostname.removeprefix("www.")
+            (remaining if domain in domains else unique).append(entry)
+            domains.add(domain)
+        entries = (unique + remaining)[:6]
         if entries:
             try:
                 extracted = await self.post("Tavily", "https://api.tavily.com/extract", {
                     "urls": [e["url"] for e in entries[:2]],
-                    "extract_depth": "basic", "format": "text",
+                    "extract_depth": "basic", "format": "text", "include_images": True,
                 })
                 pages = {r.get("url"): r.get("raw_content") for r in extracted.get("results", [])}
+                images = {r.get("url"): r.get("images", []) for r in extracted.get("results", [])}
+                tokens = [t for t in re.findall(r"[a-z0-9]+", product.lower()) if len(t) > 3]
                 for entry in entries:
+                    entry["images"] = [u for u in images.get(entry["url"], [])
+                        if isinstance(u, str) and public_url(u) and u.startswith("https://")
+                        and any(t in u.lower() for t in tokens)
+                        and not any(t in u.lower() for t in ["logo", "avatar", "icon", ".svg"])] [:3]
                     if pages.get(entry["url"]):
                         entry["content"] = pages[entry["url"]][:6000]
                         entry["full_page"] = True
@@ -141,6 +154,7 @@ class ResearchService:
                 id=f"{pid}-s{number}", product_id=pid, title=entry["title"], url=entry["url"],
                 excerpt=" ".join(entry["content"].split())[:160], retrieved_at=now(),
                 kind="page" if entry.get("full_page") else "search_excerpt",
+                image_urls=entry.get("images", []),
             )
             sources.append(source)
             evidence.append({**source.model_dump(), "content": entry["content"]})

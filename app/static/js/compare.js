@@ -22,7 +22,7 @@ function citations(ids, sources) {
   const span = el('span');
   for (const id of ids || []) {
     const source = sources.get(id); if (!source) continue;
-    const a = sourceLink(source, `[${id}]`); a.className = 'source-cite'; a.title = source.title;
+    const a = sourceLink(source, `${new URL(source.url).hostname.replace(/^www\./, '')} [${id}]`); a.className = 'source-cite'; a.title = source.title;
     span.append(a);
   }
   return span;
@@ -91,6 +91,20 @@ function render(data) {
   for (const [i, product] of data.products.entries()) {
     const card = el('article', null, 'product-card');
     card.append(el('span', `0${i+1} / THE OPTION`, 'product-number'), el('h3', product.name));
+    const productSources = data.sources.filter(source => source.product_id === product.id);
+    const photoSource = productSources.find(source => source.image_urls?.some(url => safeUrl(url)));
+    const figure = el('figure', null, 'product-photo');
+    if (photoSource) {
+      const img = el('img'); img.src = photoSource.image_urls.find(url => safeUrl(url));
+      img.alt = `${product.name} - image from source website`; img.loading = 'lazy'; img.referrerPolicy = 'no-referrer';
+      img.onerror = () => { figure.replaceChildren(el('span', 'Image unavailable', 'muted')); };
+      const caption = el('figcaption'); caption.append(sourceLink(photoSource, `Image: ${new URL(photoSource.url).hostname}`));
+      figure.append(img, caption);
+    } else { figure.append(el('span', 'No matching product image found', 'muted')); }
+    card.append(figure);
+    const sourceNav = el('div', null, 'product-websites'); sourceNav.append(el('h4', 'WEBSITES USED'));
+    productSources.forEach(source => sourceNav.append(sourceLink(source, `${new URL(source.url).hostname.replace(/^www\./, '')}`)));
+    card.append(sourceNav);
     if (product.variant_note) card.append(el('p', product.variant_note, 'variant-note'));
     const best = cited(product.best_for, sources); best.className = 'best-for'; card.append(best);
     for (const [label, claims] of [['WHAT STANDS OUT', product.strengths], ['THE TRADEOFFS', product.limitations]]) {

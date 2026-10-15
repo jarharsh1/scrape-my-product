@@ -3,6 +3,8 @@ Main FastAPI application for the Product Intelligence Scraper.
 """
 
 import logging
+import os
+import re
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -11,7 +13,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse
 
 load_dotenv()
 
@@ -78,7 +80,8 @@ app.include_router(compare_router)
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     """Serve the main application page."""
-    return templates.TemplateResponse(request=request, name="compare.html")
+    return templates.TemplateResponse(request=request, name="compare.html",
+        context={"adsense_publisher_id": adsense_publisher_id()})
 
 
 @app.get("/legacy", response_class=HTMLResponse)
@@ -110,3 +113,16 @@ async def api_info():
             "documentation": "/api/docs"
         }
     }
+
+
+def adsense_publisher_id():
+    value = os.getenv("ADSENSE_PUBLISHER_ID", "").strip()
+    return value if re.fullmatch(r"ca-pub-\d{16}", value) else ""
+
+
+@app.get("/ads.txt", response_class=PlainTextResponse)
+async def ads_txt():
+    publisher = adsense_publisher_id()
+    if not publisher:
+        return PlainTextResponse("Advertising is not configured.\n", status_code=404)
+    return PlainTextResponse(f"google.com, {publisher[3:]}, DIRECT, f08c47fec0942fa0\n")

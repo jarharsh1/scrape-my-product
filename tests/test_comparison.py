@@ -193,3 +193,27 @@ def test_rate_limit_prevents_unbounded_provider_calls(monkeypatch):
         assert client.post("/api/compare", json={"query": "Alpha vs Beta"},
                            headers={"X-Tavily-Api-Key": "test", "X-OpenAI-Api-Key": "test"}).status_code == 429
     assert len(calls) == 5
+
+
+def test_ad_config_requires_valid_publisher(monkeypatch):
+    monkeypatch.delenv("ADSENSE_PUBLISHER_ID", raising=False)
+    with TestClient(app) as client:
+        assert "adsbygoogle.js" not in client.get("/").text
+        assert client.get("/ads.txt").status_code == 404
+        monkeypatch.setenv("ADSENSE_PUBLISHER_ID", "ca-pub-1234567890123456")
+        assert "adsbygoogle.js?client=ca-pub-1234567890123456" in client.get("/").text
+        assert client.get("/ads.txt").text == "google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0\n"
+        monkeypatch.setenv("ADSENSE_PUBLISHER_ID", "invalid")
+        assert "adsbygoogle.js" not in client.get("/").text
+
+
+@pytest.mark.asyncio
+async def test_source_images_are_filtered_and_attributed():
+    async def transport(request):
+        if request.url.path == "/search":
+            return httpx.Response(200, json={"results": [{"url": "https://example.com/alpha", "content": "Alpha specs", "title": "Alpha"}]})
+        return httpx.Response(200, json={"results": [{"url": "https://example.com/alpha", "raw_content": "Alpha specs", "images": ["https://example.com/alpha.jpg", "https://example.com/alpha-logo.png", "javascript:alpha()"]}]})
+    async with httpx.AsyncClient(transport=httpx.MockTransport(transport)) as client:
+        found, _, _ = await ResearchService(client, Credentials(tavily="test", openai="test")).discover(0, "Alpha", "India")
+    assert found[0].image_urls == ["https://example.com/alpha.jpg"]
+    assert found[0].url == "https://example.com/alpha"
