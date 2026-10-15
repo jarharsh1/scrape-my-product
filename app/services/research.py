@@ -54,7 +54,7 @@ class ResearchService:
                 headers={"Authorization": f"Bearer {key.get_secret_value()}"},
             )
             if response.status_code in {401, 403}:
-                raise ResearchError(f"{provider} rejected the API key. Check it in Connections.", 401)
+                raise ResearchError(f"{provider} rejected the API key. Check server configuration.", 401)
             if response.status_code == 429:
                 raise ResearchError(f"{provider} usage limit reached. Check billing or try later.", 429)
             if response.is_error:

@@ -142,7 +142,9 @@ async def test_single_product_is_not_silently_expanded():
     assert caught.value.status == 422
 
 
-def test_endpoint_passes_request_keys_without_persisting(monkeypatch):
+def test_endpoint_uses_owner_keys_ignoring_visitor_headers(monkeypatch):
+    monkeypatch.setenv("TAVILY_API_KEY", "owner-tavily-secret")
+    monkeypatch.setenv("OPENAI_API_KEY", "owner-openai-secret")
     seen = []
     async def fake_compare(self, query, country):
         seen.append(self.credentials.tavily.get_secret_value())
@@ -155,8 +157,8 @@ def test_endpoint_passes_request_keys_without_persisting(monkeypatch):
         assert response.status_code == 200
         assert response.headers["cache-control"] == "no-store"
         assert "secret" not in response.text
-        assert client.get("/api/compare/status").json()["tavily_configured"] is False
-    assert seen == ["test-tavily-secret"]
+        assert client.get("/api/compare/status").json()["tavily_configured"] is True
+    assert seen == ["owner-tavily-secret"]
 
 
 def test_link_safety():
@@ -174,6 +176,8 @@ def test_rejects_price_not_present_in_evidence():
 
 
 def test_rate_limit_prevents_unbounded_provider_calls(monkeypatch):
+    monkeypatch.setenv("TAVILY_API_KEY", "test")
+    monkeypatch.setenv("OPENAI_API_KEY", "test")
     calls = []
     async def fake_compare(self, query, country):
         calls.append(query)

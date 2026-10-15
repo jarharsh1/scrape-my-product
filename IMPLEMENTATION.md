@@ -16,13 +16,11 @@ python -m pip install -r requirements.txt
 python run.py
 ```
 
-Open http://127.0.0.1:8000. Choose **Connections** and enter Tavily and OpenAI
-keys. Keys entered here remain in tab memory and are sent to the local server
-with each comparison. Clearing keys or closing the tab removes them. Do not
-use this development UI over unencrypted remote HTTP.
-
-Alternatively copy `.env.example` to `.env` and fill the two keys. `.env` is
-ignored by Git. Environment keys stay on the server; `/api/compare/status`
+Open http://127.0.0.1:8000. Copy `.env.example` to `.env` and fill
+`TAVILY_API_KEY` and `OPENAI_API_KEY` with the owner's keys. On Vercel,
+set these in the project's Production environment variables and redeploy.
+Visitors only enter product names; they never supply credentials.
+Environment keys stay on the server; `/api/compare/status`
 only exposes whether each is configured. `OPENAI_MODEL` is configurable and
 defaults to `gpt-4.1-mini`; the selected model must support Responses API
 structured outputs. OpenAI API billing is separate from a ChatGPT subscription.
@@ -75,9 +73,9 @@ after 180 seconds). Connect the GitHub repository with `main` as the production
 branch, or use `vercel --prod` from the repository root. `.vercelignore` excludes
 local environment files and tests from deployment uploads.
 
-Set `TAVILY_API_KEY` and `OPENAI_API_KEY` in Vercel environment settings if you
-want server-managed credentials; otherwise the Connections panel accepts keys
-for the current tab. No API keys are included in this repository.
+Set `TAVILY_API_KEY` and `OPENAI_API_KEY` in Vercel Production environment
+settings, then redeploy. Credentials are server-only. No API keys are included
+in this repository.
 
 This is a local MVP, not a publicly hardened service. Add HTTPS, shared rate
 limits, usage budgets and monitoring, and configure server credentials in a

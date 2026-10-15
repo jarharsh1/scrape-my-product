@@ -7,8 +7,8 @@ QuietComfort Ultra** and researches a sourced comparison across the web using
 Tavily and OpenAI. No product URLs or merchant selection are required.
 
 Run with Python **3.11+**, install `requirements.txt`, and launch `python run.py`.
-Open **http://127.0.0.1:8000** and add your API keys in **Connections**, or configure
-them using `.env.example`. Keys entered in the UI are kept only for the tab.
+Configure owner keys on the server using `.env.example`, then open
+**http://127.0.0.1:8000**. Visitors never enter API keys.
 Without keys the UI loads, but live research remains unavailable.
 
 See [IMPLEMENTATION.md](IMPLEMENTATION.md) for architecture, tests, and launch

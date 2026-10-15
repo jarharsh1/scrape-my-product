@@ -1,7 +1,5 @@
-/* Keys stay in tab memory only. Provider output is always rendered as text. */
+/* Provider output is always rendered as text. Credentials stay on the server. */
 const $ = id => document.getElementById(id);
-let credentials = {tavily: '', openai: ''};
-let configured = {tavily_configured: false, openai_configured: false};
 let controller = null;
 let currentResult = null;
 
@@ -32,24 +30,6 @@ function citations(ids, sources) {
 function cited(claim, sources, tag = 'p') {
   const node = el(tag, claim.text); node.append(citations(claim.source_ids, sources)); return node;
 }
-function readiness() {
-  const ready = (credentials.tavily || configured.tavily_configured) && (credentials.openai || configured.openai_configured);
-  $('connectionDot').classList.toggle('ready', Boolean(ready));
-  $('connectionLabel').textContent = ready ? 'Tools connected' : 'Connections';
-  $('tavilyStatus').textContent = configured.tavily_configured ? 'Available on server' : '';
-  $('openaiStatus').textContent = configured.openai_configured ? 'Available on server' : '';
-}
-$('openSettings').onclick = () => { $('savedMessage').textContent = ''; $('settingsDialog').showModal(); };
-$('closeSettings').onclick = () => $('settingsDialog').close();
-$('errorSettings').onclick = () => $('settingsDialog').showModal();
-$('settingsForm').onsubmit = event => {
-  event.preventDefault(); credentials = {tavily: $('tavilyKey').value.trim(), openai: $('openaiKey').value.trim()};
-  readiness(); $('settingsDialog').close();
-};
-$('clearKeys').onclick = () => {
-  credentials = {tavily: '', openai: ''}; $('tavilyKey').value = ''; $('openaiKey').value = '';
-  $('savedMessage').textContent = 'Tab keys cleared.'; readiness();
-};
 document.querySelectorAll('[data-query]').forEach(button => button.onclick = () => {
   $('query').value = button.dataset.query; $('query').focus();
 });
@@ -66,8 +46,6 @@ $('compareForm').onsubmit = async event => {
   controller = new AbortController();
   try {
     const headers = {'Content-Type': 'application/json'};
-    if (credentials.tavily) headers['X-Tavily-Api-Key'] = credentials.tavily;
-    if (credentials.openai) headers['X-OpenAI-Api-Key'] = credentials.openai;
     const response = await fetch('/api/compare', {method: 'POST', headers,
       body: JSON.stringify({query: $('query').value.trim(), country: $('country').value}), signal: controller.signal});
     const data = await response.json();
@@ -80,12 +58,10 @@ $('compareForm').onsubmit = async event => {
   } catch (error) {
     if (error.name === 'AbortError') {
       $('errorTitle').textContent = 'Comparison cancelled.';
-      $('errorMessage').textContent = 'You can edit the products and start again. Requests already sent may still incur provider charges.';
-      $('errorSettings').hidden = true;
+      $('errorMessage').textContent = 'You can edit the products and start again.';
     } else {
-      $('errorTitle').textContent = error.setup ? 'Connect your tools to start.' : 'We couldn’t finish that comparison.';
+      $('errorTitle').textContent = error.setup ? 'Comparison is temporarily unavailable.' : 'We couldn’t finish that comparison.';
       $('errorMessage').textContent = error.message === 'Failed to fetch' ? 'Connection interrupted. Check the server and try again.' : error.message;
-      $('errorSettings').hidden = !error.setup;
     }
     $('errorPanel').hidden = false;
   } finally {
@@ -155,5 +131,3 @@ function render(data) {
   });
   details.append(list); root.append(details, el('p', 'AI-assisted synthesis of linked sources; details may be incomplete or incorrect. Prices are observed listings, not checkout quotes. Check the exact variant, delivery, and final price with the seller.', 'result-footnote'));
 }
-
-fetch('/api/compare/status').then(r => r.ok ? r.json() : Promise.reject()).then(data => {configured = data; readiness();}).catch(() => readiness());
