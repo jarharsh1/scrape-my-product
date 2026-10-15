@@ -128,7 +128,7 @@ class ResearchService:
         if entries:
             try:
                 extracted = await self.post("Tavily", "https://api.tavily.com/extract", {
-                    "urls": [e["url"] for e in entries[:6]],
+                    "urls": [e["url"] for e in entries],
                     "extract_depth": "basic", "format": "text", "include_images": True,
                 })
                 pages = {r.get("url"): r.get("raw_content") for r in extracted.get("results", [])}
