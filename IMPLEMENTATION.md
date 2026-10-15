@@ -67,6 +67,18 @@ categories. Verify that recommendations are supported by their cited sources.
 
 ## Before public launch
 
+### Vercel deployment
+
+The repository includes a FastAPI Vercel configuration targeting `app/main.py`,
+Python 3.12, and a 240-second function duration (the application stops research
+after 180 seconds). Connect the GitHub repository with `main` as the production
+branch, or use `vercel --prod` from the repository root. `.vercelignore` excludes
+local environment files and tests from deployment uploads.
+
+Set `TAVILY_API_KEY` and `OPENAI_API_KEY` in Vercel environment settings if you
+want server-managed credentials; otherwise the Connections panel accepts keys
+for the current tab. No API keys are included in this repository.
+
 This is a local MVP, not a publicly hardened service. Add HTTPS, shared rate
 limits, usage budgets and monitoring, and configure server credentials in a
 secret manager. The current guard allows five comparisons/minute per observed
