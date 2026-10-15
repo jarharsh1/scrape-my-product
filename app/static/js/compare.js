@@ -112,12 +112,22 @@ function render(data) {
       if (!claims.length) ul.append(el('li', 'Not enough evidence to verify.', 'unknown'));
       claims.forEach(claim => ul.append(cited(claim, sources, 'li'))); card.append(ul);
     }
-    card.append(el('h4', 'OBSERVED PRICES'));
-    if (!product.offers.length) card.append(el('p', 'No price verified for this market.', 'small muted'));
-    for (const offer of product.offers) {
+    card.append(el('h4', 'COMPARE SELLER PRICES'));
+    card.append(el('p', 'Prices found on checked pages, not a complete market scan. Confirm final price and delivery at checkout.', 'small muted'));
+    const offers = [...product.offers].sort((a,b) => a.currency.localeCompare(b.currency) || a.amount-b.amount);
+    if (!offers.length) card.append(el('p', 'No direct seller price verified. Open the source websites above to check availability.', 'small muted'));
+    for (const offer of offers) {
       const source = sources.get(offer.source_id); if (!source) continue;
-      const a = sourceLink(source, offer.price_text); a.className = 'offer';
-      a.append(el('span', `${new URL(source.url).hostname.replace(/^www\./, '')} ↗`)); card.append(a);
+      const box = el('div', null, 'seller-offer');
+      box.append(el('strong', offer.price_text), el('p', new URL(source.url).hostname.replace(/^www\./, ''), 'seller-name'));
+      box.append(el('p', `${offer.variant} · ${offer.condition} · ${offer.availability.replaceAll('_',' ')}`, 'small'));
+      box.append(el('p', `Shipping: ${offer.shipping || 'Not verified'}`, 'small muted'));
+      const peers = offers.filter(o => o.currency === offer.currency && o.variant === offer.variant && o.condition === 'new' && o.availability === 'in_stock');
+      if (offer.availability === 'in_stock' && peers.length > 1 && offer.amount === Math.min(...peers.map(o => o.amount))) box.append(el('span', 'Lowest observed for this variant', 'price-badge'));
+      const buy = sourceLink(source, offer.availability === 'out_of_stock' ? 'Check seller availability ↗' : 'View offer / Buy ↗'); buy.className = 'buy-link'; box.append(buy);
+      box.append(el('p', `Checked ${new Date(source.retrieved_at).toLocaleString()}`, 'small muted'));
+      const proof = el('details'); proof.append(el('summary', 'Price evidence'), el('p', offer.evidence_quote)); box.append(proof);
+      card.append(box);
     }
     cards.append(card);
   }

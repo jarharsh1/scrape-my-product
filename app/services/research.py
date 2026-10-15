@@ -99,7 +99,7 @@ class ResearchService:
 
     async def discover(self, index: int, product: str, country: str):
         pid = f"p{index + 1}"
-        queries = [f"{product} official specifications review", f"{product} price buy {country}"]
+        queries = [f"{product} official specifications review", f"{product} price buy {country}", f'"{product}" buy online retailers in stock price {country}']
         responses = await asyncio.gather(*(self.search(q) for q in queries), return_exceptions=True)
         errors = [r for r in responses if isinstance(r, ResearchError)]
         fatal = next((e for e in errors if e.status in {401, 429}), None)
@@ -124,11 +124,11 @@ class ResearchService:
             domain = urlsplit(entry["url"]).hostname.removeprefix("www.")
             (remaining if domain in domains else unique).append(entry)
             domains.add(domain)
-        entries = (unique + remaining)[:6]
+        entries = (unique + remaining)[:10]
         if entries:
             try:
                 extracted = await self.post("Tavily", "https://api.tavily.com/extract", {
-                    "urls": [e["url"] for e in entries[:2]],
+                    "urls": [e["url"] for e in entries[:6]],
                     "extract_depth": "basic", "format": "text", "include_images": True,
                 })
                 pages = {r.get("url"): r.get("raw_content") for r in extracted.get("results", [])}
@@ -186,9 +186,15 @@ class ResearchService:
             "Omit unsupported strengths and limitations. Clearly distinguish manufacturer claims and "
             "reviewer observations; never claim you tested products. Do not infer a feature's absence. "
             "Only include offers when evidence explicitly gives a price for the exact model in the requested "
-            "market: copy price_text including currency, unit and conditions. Do not use a range or "
+            "market from a direct merchant product page, never review, price-history, search, category or comparison pages. "
+            "Each offer must use a page source (not search_excerpt). Copy a short verbatim evidence_quote "
+            "containing the selling price and its currency; price_text must be an exact substring of this quote. "
+            "Set amount to the numeric full purchase price and currency to ISO code (INR, USD, etc). "
+            "Specify exact variant, condition, availability only when stated, and shipping costs or 'Not verified'. "
+            "Return all eligible merchant offers, not just the cheapest. Never mix generations or capacities. "
+            "Only new-condition offers for the requested model; if uncertain omit. Do not use a range or "
             "installment as full price, convert currency, invent merchants or claim cheapest. If no confirmed "
-            "offer use offers=[]. Recommendations must cite evidence and explain tradeoffs; product_id=null "
+            "offer use offers=[]. Do not include prices anywhere outside offers: no price table rows, price estimates in prose or cheapest claims. Recommendations must cite evidence and explain tradeoffs; product_id=null "
             "if evidence is insufficient to choose. Avoid medical efficacy/safety advice. Include missing "
             "information and evidence conflicts in caveats. Keep descriptions concise and factual.",
             {"query": query, "country": country, "focus": plan.focus,
@@ -218,9 +224,17 @@ def validate_evidence(draft: ComparisonDraft, sources: list[Source], count: int,
         for offer in product.offers:
             check([offer.source_id], product.id)
             if evidence is not None:
+                source = next(s for s in sources if s.id == offer.source_id)
                 content = next((e["content"] for e in evidence if e["id"] == offer.source_id), "")
                 normalize = lambda value: " ".join(value.casefold().split())
-                if not offer.price_text.strip() or normalize(offer.price_text) not in normalize(content):
+                if (source.kind != "page" or offer.condition != "new" or offer.amount <= 0
+                    or not re.fullmatch(r"[A-Z]{3}", offer.currency)
+                    or not offer.evidence_quote.strip()
+                    or normalize(offer.evidence_quote) not in normalize(content)
+                    or not offer.price_text.strip()
+                    or normalize(offer.price_text) not in normalize(offer.evidence_quote)
+                    or not any(abs(float(n.replace(",", "")) - offer.amount) < 0.001
+                               for n in re.findall(r"\d[\d,]*(?:\.\d+)?", offer.price_text))):
                     note = f"{product.name}: an unverified price was omitted; check the seller for current pricing."
                     if note not in draft.caveats:
                         draft.caveats.append(note)

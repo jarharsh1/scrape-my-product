@@ -94,3 +94,6 @@ first live evaluation needs both API keys.
 Product cards show matching image URLs extracted from source pages by Tavily, with source credit and a missing-image fallback. URL-name matching is heuristic, not visual identity verification. Research prefers distinct hostnames before filling duplicate-host sources. Every card lists its source website links.
 
 To enable AdSense integration, set ADSENSE_PUBLISHER_ID to your real ca-pub-16-digit ID and redeploy. This enables the Auto ads script and /ads.txt. Create and approve the site in AdSense, enable Auto ads and configure the required consent/privacy settings in that account before serving ads. No ad script loads while the ID is absent or invalid.
+
+## Seller price comparison
+Research now makes three searches per product, retains up to ten sources with website diversity, and extracts up to six pages. This increases provider usage. Direct merchant offers include amount/currency, variant, condition, stock and shipping status plus verbatim price evidence. The server rejects search-only prices and mismatched numeric amounts. Seller identity and model relevance are model-assisted, not independently guaranteed. Lowest-observed labels compare only identical variant strings, currency and new in-stock condition; shipping is not included. No promise of complete merchant coverage or checkout price is made.

@@ -88,7 +88,7 @@ async def test_full_research_pipeline():
     async with httpx.AsyncClient(transport=httpx.MockTransport(transport)) as client:
         service = ResearchService(client, Credentials(tavily="test", openai="test"))
         result = await service.compare("Monitor Alpha vs Monitor Beta", "India")
-    assert len(calls) == 8  # two OpenAI calls, four searches, two extracts
+    assert len(calls) == 10  # two OpenAI calls, four searches, two extracts
     assert len(result.sources) == 2  # duplicate URLs collapsed per product
     assert all(s.kind == "page" for s in result.sources)
     assert result.products[0].offers == []
@@ -169,7 +169,7 @@ def test_link_safety():
 
 def test_omits_unverified_price_without_losing_comparison():
     data = draft_data()
-    data["products"][0]["offers"] = [{"price_text": "₹9,999", "source_id": "p1-s1"}]
+    data["products"][0]["offers"] = [{"price_text": "₹9,999", "source_id": "p1-s1", "amount": 9999, "currency": "INR", "variant": "27-inch", "condition": "new", "availability": "in_stock", "shipping": "Not verified", "evidence_quote": "₹9,999"}]
     draft = ComparisonDraft.model_validate(data)
     validate_evidence(draft, sources(), 2,
                       [{"id": "p1-s1", "content": "An IPS monitor. Price unavailable."}])
@@ -217,3 +217,19 @@ async def test_source_images_are_filtered_and_attributed():
         found, _, _ = await ResearchService(client, Credentials(tavily="test", openai="test")).discover(0, "Alpha", "India")
     assert found[0].image_urls == ["https://example.com/alpha.jpg"]
     assert found[0].url == "https://example.com/alpha"
+
+
+@pytest.mark.parametrize("kind,amount,quote,expected", [
+    ("page", 9999, "Price INR 9,999", 1),
+    ("search_excerpt", 9999, "Price INR 9,999", 0),
+    ("page", 99, "Price INR 9,999", 0),
+    ("page", 9999, "Invented INR 9,999", 0),
+])
+def test_seller_price_requires_page_evidence(kind, amount, quote, expected):
+    data = draft_data()
+    data["products"][0]["offers"] = [{"price_text": "INR 9,999", "source_id": "p1-s1", "amount": amount, "currency": "INR", "variant": "27-inch", "condition": "new", "availability": "unknown", "shipping": "Not verified", "evidence_quote": quote}]
+    draft = ComparisonDraft.model_validate(data)
+    refs = sources()
+    refs[0].kind = kind
+    validate_evidence(draft, refs, 2, [{"id": "p1-s1", "content": "Monitor Alpha. Price INR 9,999"}])
+    assert len(draft.products[0].offers) == expected

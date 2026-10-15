@@ -42,6 +42,13 @@ class CitedText(Contract):
 class Offer(Contract):
     price_text: str
     source_id: str
+    amount: float
+    currency: str
+    variant: str
+    condition: Literal["new", "used", "refurbished", "unknown"]
+    availability: Literal["in_stock", "out_of_stock", "unknown"]
+    shipping: str
+    evidence_quote: str
 
 
 class ComparedProduct(Contract):
