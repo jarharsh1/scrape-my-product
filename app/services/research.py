@@ -200,13 +200,19 @@ def validate_evidence(draft: ComparisonDraft, sources: list[Source], count: int,
     for product in draft.products:
         for claim in [product.best_for, *product.strengths, *product.limitations]:
             check(claim.source_ids, product.id, claim.text == "Not verified")
+        verified_offers = []
         for offer in product.offers:
             check([offer.source_id], product.id)
             if evidence is not None:
                 content = next((e["content"] for e in evidence if e["id"] == offer.source_id), "")
                 normalize = lambda value: " ".join(value.casefold().split())
                 if not offer.price_text.strip() or normalize(offer.price_text) not in normalize(content):
-                    raise ResearchError("A listed price could not be verified in its source. Please retry.")
+                    note = f"{product.name}: an unverified price was omitted; check the seller for current pricing."
+                    if note not in draft.caveats:
+                        draft.caveats.append(note)
+                    continue
+            verified_offers.append(offer)
+        product.offers = verified_offers
     for row in draft.rows:
         if [v.product_id for v in row.values] != expected:
             raise ResearchError("The comparison table was incomplete. Please retry.")

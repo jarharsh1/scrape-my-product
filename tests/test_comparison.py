@@ -167,12 +167,15 @@ def test_link_safety():
     assert public_url("https://example.com/product#reviews") == "https://example.com/product"
 
 
-def test_rejects_price_not_present_in_evidence():
+def test_omits_unverified_price_without_losing_comparison():
     data = draft_data()
     data["products"][0]["offers"] = [{"price_text": "₹9,999", "source_id": "p1-s1"}]
-    with pytest.raises(ResearchError, match="price"):
-        validate_evidence(ComparisonDraft.model_validate(data), sources(), 2,
-                          [{"id": "p1-s1", "content": "An IPS monitor. Price unavailable."}])
+    draft = ComparisonDraft.model_validate(data)
+    validate_evidence(draft, sources(), 2,
+                      [{"id": "p1-s1", "content": "An IPS monitor. Price unavailable."}])
+    assert draft.products[0].offers == []
+    assert any("unverified price was omitted" in note for note in draft.caveats)
+    assert draft.rows
 
 
 def test_rate_limit_prevents_unbounded_provider_calls(monkeypatch):
