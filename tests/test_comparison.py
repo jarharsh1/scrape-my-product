@@ -221,11 +221,11 @@ async def test_source_images_are_filtered_and_attributed():
 
 @pytest.mark.parametrize("kind,amount,quote,expected", [
     ("page", 9999, "Price INR 9,999", 1),
-    ("search_excerpt", 9999, "Price INR 9,999", 0),
+    ("search_excerpt", 9999, "Price INR 9,999", 1),
     ("page", 99, "Price INR 9,999", 0),
     ("page", 9999, "Invented INR 9,999", 0),
 ])
-def test_seller_price_requires_page_evidence(kind, amount, quote, expected):
+def test_seller_price_requires_exact_source_evidence(kind, amount, quote, expected):
     data = draft_data()
     data["products"][0]["offers"] = [{"price_text": "INR 9,999", "source_id": "p1-s1", "amount": amount, "currency": "INR", "variant": "27-inch", "condition": "new", "availability": "unknown", "shipping": "Not verified", "evidence_quote": quote}]
     draft = ComparisonDraft.model_validate(data)

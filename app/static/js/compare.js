@@ -113,12 +113,13 @@ function render(data) {
       claims.forEach(claim => ul.append(cited(claim, sources, 'li'))); card.append(ul);
     }
     card.append(el('h4', 'COMPARE SELLER PRICES'));
-    card.append(el('p', 'Prices found on checked pages, not a complete market scan. Confirm final price and delivery at checkout.', 'small muted'));
+    card.append(el('p', 'Listed prices found during research. Search listings can lag behind seller updates; confirm final price and delivery at checkout.', 'small muted'));
     const offers = [...product.offers].sort((a,b) => a.currency.localeCompare(b.currency) || a.amount-b.amount);
     if (!offers.length) card.append(el('p', 'No direct seller price verified. Open the source websites above to check availability.', 'small muted'));
     for (const offer of offers) {
       const source = sources.get(offer.source_id); if (!source) continue;
       const box = el('div', null, 'seller-offer');
+      box.append(el('p', source.kind === 'page' ? 'Listed on seller page' : 'Listed in search result · seller page not verified', 'small muted'));
       box.append(el('strong', offer.price_text), el('p', new URL(source.url).hostname.replace(/^www\./, ''), 'seller-name'));
       box.append(el('p', `${offer.variant} · ${offer.condition} · ${offer.availability.replaceAll('_',' ')}`, 'small'));
       box.append(el('p', `Shipping: ${offer.shipping || 'Not verified'}`, 'small muted'));
