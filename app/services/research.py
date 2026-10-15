@@ -242,7 +242,8 @@ def validate_evidence(draft: ComparisonDraft, sources: list[Source], count: int,
                 source = next(s for s in sources if s.id == offer.source_id)
                 content = next((e["content"] for e in evidence if e["id"] == offer.source_id), "")
                 normalize = lambda value: " ".join(value.casefold().split())
-                if (offer.condition in {"used", "refurbished"} or offer.amount <= 0
+                if (urlsplit(source.url).hostname.removeprefix("www.") in {"pricehistory.app", "pricehistory.in", "smartprix.com", "gadgets360.com", "mysmartprice.com", "91mobiles.com"}
+                    or offer.condition in {"used", "refurbished"} or offer.amount <= 0
                     or not re.fullmatch(r"[A-Z]{3}", offer.currency)
                     or not offer.evidence_quote.strip()
                     or normalize(offer.evidence_quote) not in normalize(content)

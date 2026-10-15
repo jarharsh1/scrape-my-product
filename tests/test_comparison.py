@@ -233,3 +233,13 @@ def test_seller_price_requires_exact_source_evidence(kind, amount, quote, expect
     refs[0].kind = kind
     validate_evidence(draft, refs, 2, [{"id": "p1-s1", "content": "Monitor Alpha. Price INR 9,999"}])
     assert len(draft.products[0].offers) == expected
+
+
+def test_price_tracker_is_not_a_buying_offer():
+    data = draft_data()
+    data["products"][0]["offers"] = [{"price_text": "INR 9999", "source_id": "p1-s1", "amount": 9999, "currency": "INR", "variant": "27-inch", "condition": "new", "availability": "in_stock", "shipping": "Not verified", "evidence_quote": "INR 9999"}]
+    draft = ComparisonDraft.model_validate(data)
+    refs = sources()
+    refs[0].url = "https://pricehistory.app/p/monitor"
+    validate_evidence(draft, refs, 2, [{"id": "p1-s1", "content": "INR 9999"}])
+    assert draft.products[0].offers == []
