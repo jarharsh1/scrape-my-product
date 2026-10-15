@@ -4,6 +4,8 @@ Entry point for running the Product Intelligence Scraper application.
 """
 
 import uvicorn
+from dotenv import load_dotenv
+load_dotenv()
 from app.config import config
 
 

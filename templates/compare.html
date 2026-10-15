@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Enter the products. Get the differences that matter, with sources you can check.">
+  <title>Side by Side — A little clarity before you buy.</title>
+  <link rel="stylesheet" href="/static/css/compare.css">
+  <script src="/static/js/compare.js" defer></script>
+</head>
+<body>
+  <header class="site-header wrap">
+    <a href="/" class="brand" aria-label="Side by Side home"><span class="brand-mark" aria-hidden="true">▥</span> side<span class="brand-light">by</span>side<span class="brand-dot">.</span></a>
+    <button class="connection-button" id="openSettings"><span id="connectionDot" class="status-dot"></span><span id="connectionLabel">Connections</span><span aria-hidden="true">↗</span></button>
+  </header>
+  <main class="wrap">
+    <section class="hero" aria-labelledby="headline">
+      <div class="eyebrow"><span class="tiny-line"></span> A LITTLE CLARITY BEFORE YOU BUY</div>
+      <h1 id="headline">The products you’re torn between.<br><em>The differences that matter.</em></h1>
+      <p class="intro">Just name them. We’ll find the details, compare the tradeoffs,<br class="desktop-break"> and help you make up your mind.</p>
+      <form id="compareForm" class="search-card">
+        <label for="query" class="sr-only">Products to compare</label>
+        <textarea id="query" name="query" rows="2" maxlength="600" required minlength="5" placeholder="Sony WH-1000XM5 vs Bose QuietComfort Ultra"></textarea>
+        <div class="search-bottom"><span class="search-hint">Two to four products. All the research, handled.</span><button type="submit" class="primary" id="compareButton">Compare products <span aria-hidden="true">↗</span></button></div>
+      </form>
+      <div class="search-options"><label>Shopping in <select id="country" aria-label="Shopping country"><option>India</option><option>United States</option><option>United Kingdom</option><option>Saudi Arabia</option><option>United Arab Emirates</option><option>Canada</option><option>Australia</option><option>Germany</option><option>Singapore</option></select></label><span>Names in. Clarity out.</span></div>
+      <div class="examples"><span>TRY A COMPARISON</span><button type="button" data-query="Sony WH-1000XM5 vs Bose QuietComfort Ultra">Headphones <span>↗</span></button><button type="button" data-query="Kindle Paperwhite vs Kobo Clara BW">E-readers <span>↗</span></button><button type="button" data-query="Dyson V12 Detect Slim vs Samsung Jet 75">Vacuum cleaners <span>↗</span></button></div>
+    </section>
+
+    <section class="loading-panel" id="loadingPanel" hidden aria-live="polite" aria-label="Research progress"><div class="orbit" aria-hidden="true"></div><div><span class="eyebrow">YOUR RESEARCH IS UNDERWAY</span><h2>We’re connecting the dots.</h2><p>Finding product pages, checking the details, and putting the tradeoffs side by side. This can take up to three minutes.</p><p class="loading-note" id="loadingNote">Researching the products you named…</p><button class="text-button" id="cancelResearch" type="button">Cancel comparison</button></div></section>
+    <div class="error-panel" id="errorPanel" hidden role="alert"><strong id="errorTitle">We couldn’t finish that comparison.</strong><p id="errorMessage"></p><button id="errorSettings" class="text-button" hidden type="button">Open Connections ↗</button></div>
+    <section id="results" hidden aria-label="Product comparison" tabindex="-1"></section>
+
+    <section class="how-it-works" id="howItWorks"><div class="section-label">LESS TAB HOPPING.<br>MORE CERTAINTY.</div><div class="step"><span>01 / DISCOVER</span><h3>The web, researched.</h3><p>Relevant product pages and reviews, found automatically across the web.</p></div><div class="step"><span>02 / COMPARE</span><h3>The details, made useful.</h3><p>Meaningful differences for the category, with missing information called out.</p></div><div class="step"><span>03 / DECIDE</span><h3>A choice you can explain.</h3><p>A recommendation with tradeoffs and sources you can open for yourself.</p></div></section>
+    <footer><span>sidebyside. <span class="muted">Built for the in-between decisions.</span></span><span>AI-assisted research. Sources included.</span></footer>
+  </main>
+
+  <dialog id="settingsDialog" aria-labelledby="settingsTitle"><form id="settingsForm"><div class="dialog-top"><span class="eyebrow">WORKSPACE SETUP</span><button class="icon-button" type="button" id="closeSettings" aria-label="Close connections">×</button></div><h2 id="settingsTitle">Connect your research tools.</h2><p>Enter keys once for this tab. They are sent to this server to call Tavily and OpenAI, and are never saved in browser storage or application files.</p><label class="field-label" for="tavilyKey">Tavily API key <span id="tavilyStatus"></span></label><input type="password" id="tavilyKey" autocomplete="off" spellcheck="false" placeholder="tvly-…" maxlength="512"><label class="field-label" for="openaiKey">OpenAI API key <span id="openaiStatus"></span></label><input type="password" id="openaiKey" autocomplete="off" spellcheck="false" placeholder="sk-…" maxlength="512"><p class="small muted">Server environment keys are used when these fields are blank. For a hosted deployment, configure owner keys on the server.</p><div class="dialog-actions"><button type="button" id="clearKeys" class="text-button">Clear tab keys</button><button type="submit" class="primary">Use these keys <span>↗</span></button></div><p id="savedMessage" role="status" class="small"></p></form></dialog>
+</body>
+</html>
