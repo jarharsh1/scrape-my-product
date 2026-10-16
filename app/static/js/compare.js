@@ -123,12 +123,18 @@ function render(data) {
     const card = el('article', null, 'product-card');
     card.append(el('span', `0${i+1} / THE OPTION`, 'product-number'), el('h3', product.name));
     const productSources = data.sources.filter(source => source.product_id === product.id);
-    const photoSource = productSources.find(source => source.image_urls?.some(url => safeUrl(url)));
+    const photoCandidates = productSources.flatMap(source => (source.image_urls || []).filter(url => safeUrl(url)).map(url => ({source,url})));
+    const photoSource = photoCandidates[0]?.source;
     const figure = el('figure', null, 'product-photo');
     if (photoSource) {
       const img = el('img'); img.src = photoSource.image_urls.find(url => safeUrl(url));
       img.alt = `${product.name} - image from source website`; img.loading = 'lazy'; img.referrerPolicy = 'no-referrer';
-      img.onerror = () => { figure.replaceChildren(el('span', 'Image unavailable', 'muted')); };
+      let photoIndex = 0;
+      img.onerror = () => {
+        const next = photoCandidates[++photoIndex];
+        if (next) { img.src = next.url; caption.replaceChildren(sourceLink(next.source, `Image: ${new URL(next.source.url).hostname}`)); }
+        else figure.replaceChildren(el('span', 'Image unavailable', 'muted'));
+      };
       const caption = el('figcaption'); caption.append(sourceLink(photoSource, `Image: ${new URL(photoSource.url).hostname}`));
       figure.append(img, caption);
     } else { figure.append(el('span', 'No matching product image found', 'muted')); }
