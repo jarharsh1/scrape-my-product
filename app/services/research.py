@@ -56,9 +56,11 @@ def image_candidates(items: list, product: str) -> list[str]:
     candidates = []
     parts = re.findall(r"[a-z0-9]+", product.lower())
     required = [p for p in parts if p not in {"wireless", "headphones", "headphone", "generation", "the"}]
-    for item in items:
+    for item in items or []:
         url = item.get("url", "") if isinstance(item, dict) else item
-        description = item.get("description", "") if isinstance(item, dict) else ""
+        description = (item.get("description") or "") if isinstance(item, dict) else ""
+        if not isinstance(description, str):
+            description = ""
         if not isinstance(url, str) or not public_url(url) or not url.startswith("https://"):
             continue
         compact = re.sub(r"[^a-z0-9]", "", description.lower())

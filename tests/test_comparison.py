@@ -259,3 +259,9 @@ def test_described_images_allow_opaque_cdn_urls():
              {"url": "https://cdn.example.com/other.jpg", "description": "Sony WH-1000XM4 headphones"},
              {"url": "https://cdn.example.com/banner.jpg", "description": "Sony WH-1000XM5 comparison collage"}]
     assert image_candidates(items, "Sony WH-1000XM5") == ["https://cdn.example.com/a8f9.jpg"]
+
+
+def test_optional_image_metadata_is_safe():
+    from app.services.research import image_candidates
+    assert image_candidates(None, "Sony WH-1000XM5") == []
+    assert image_candidates([{"url":"https://cdn.example.com/random.jpg", "description":None}], "Sony WH-1000XM5") == []

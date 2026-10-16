@@ -78,6 +78,7 @@ $('compareForm').onsubmit = async event => {
     const headers = {'Content-Type': 'application/json'};
     const response = await fetch('/api/compare', {method: 'POST', headers,
       body: JSON.stringify({query: $('query').value.trim(), country: $('country').value}), signal: controller.signal});
+    if (!response.headers.get("content-type")?.includes("application/json")) throw new Error("Research is temporarily unavailable. Please try again.");
     const data = await response.json();
     if (!response.ok) {
       const detail = data.detail;
