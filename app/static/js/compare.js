@@ -30,23 +30,54 @@ function citations(ids, sources) {
 function cited(claim, sources, tag = 'p') {
   const node = el(tag, claim.text); node.append(citations(claim.source_ids, sources)); return node;
 }
-const catalog = ['Samsung Galaxy S24 Plus','Samsung Galaxy S24 Ultra','Samsung Galaxy S25 Ultra','Apple iPhone 16 Pro','Apple iPhone 16','Google Pixel 9 Pro','Google Pixel 9','Sony Xperia 1 VI','Sony WH-1000XM5','Sennheiser Momentum 4 Wireless','Bose QuietComfort Ultra Headphones','Apple AirPods Max (USB-C)','Kindle Paperwhite (12th generation)','Kobo Clara BW','Kobo Libra Colour','Dyson V12 Detect Slim','Samsung Jet 75'];
+const catalog = [
+ ['Samsung Galaxy S24 Plus','Phone · Samsung Galaxy S series'],['Samsung Galaxy S24 Ultra','Phone · Samsung Galaxy S series'],['Samsung Galaxy S25 Ultra','Phone · Samsung Galaxy S series'],
+ ['Apple iPhone 16 Pro','Phone · Apple iPhone Pro series'],['Apple iPhone 16','Phone · Apple iPhone series'],['Google Pixel 9 Pro','Phone · Google Pixel Pro series'],['Google Pixel 9','Phone · Google Pixel series'],['Sony Xperia 1 VI','Phone · Sony Xperia series'],
+ ['Sony WH-1000XM5','Over-ear headphones · Sony'],['Sennheiser Momentum 4 Wireless','Over-ear headphones · Sennheiser'],['Bose QuietComfort Ultra Headphones','Over-ear headphones · Bose'],['Apple AirPods Max (USB-C)','Over-ear headphones · Apple'],
+ ['Kindle Paperwhite (12th generation)','E-reader · Amazon Kindle'],['Kobo Clara BW','E-reader · Kobo · black-and-white model'],['Kobo Libra Colour','E-reader · Kobo · colour model'],['Dyson V12 Detect Slim','Cordless vacuum · Dyson'],['Samsung Jet 75','Cordless vacuum · Samsung']
+].map(([name,snippet])=>({name,snippet}));
 const selected = new Set();
+let picks = ['', ''];
 function syncSelection() {
+  selected.clear(); picks.filter(Boolean).forEach(p=>selected.add(p));
   $('query').value = [...selected].join(' vs ');
-  $('selectedProducts').replaceChildren();
-  selected.forEach(name => { const b=el('button', `${name} ×`); b.type='button'; b.setAttribute('aria-label', `Remove ${name}`); b.onclick=()=>{selected.delete(name);syncSelection();}; $('selectedProducts').append(b); });
-  $('pickerStatus').textContent = `${selected.size}/4 selected. You can also edit the text search below.`;
-  drawCatalog();
+  $('pickerStatus').textContent = `${selected.size} products selected. Suggestions are a starter catalog; custom models are supported.`;
 }
-function drawCatalog() {
-  const q=$('catalogSearch').value.toLowerCase(); const matches=catalog.filter(n=>n.toLowerCase().includes(q));
-  $('catalogList').replaceChildren();
-  matches.forEach(name=>{const b=el('button',name);b.type='button';b.setAttribute('aria-pressed',String(selected.has(name)));b.disabled=!selected.has(name)&&selected.size>=4;b.onclick=()=>{selected.has(name)?selected.delete(name):selected.add(name);syncSelection();};$('catalogList').append(b);});
-  if(!matches.length) $('catalogList').append(el('p','Not in this catalog? Enter the exact model in the text search below.','small muted'));
+function drawDropdowns() {
+  $('productDropdowns').replaceChildren();
+  picks.forEach((picked,index)=>{
+    const wrap=el('div',null,'product-dropdown'), label=el('label',`Product ${index+1}`), input=el('input'), menu=el('div',null,'suggestion-menu');
+    input.id=`product-pick-${index}`;label.htmlFor=input.id;input.value=picked;input.placeholder='Type a product name…';input.autocomplete='off';
+    input.setAttribute('role','combobox'); input.setAttribute('aria-autocomplete','list');input.setAttribute('aria-expanded','false');
+    menu.id=`product-options-${index}`;menu.setAttribute('role','listbox');menu.hidden=true;input.setAttribute('aria-controls',menu.id);
+    let active=-1, options=[];
+    const close=()=>{menu.hidden=true;input.setAttribute('aria-expanded','false');input.removeAttribute('aria-activedescendant');};
+    const choose=name=>{picks[index]=name;input.value=name;syncSelection();close();};
+    const show=()=>{
+      const q=input.value.trim().toLowerCase(); active=-1;menu.replaceChildren();input.removeAttribute('aria-activedescendant');
+      options=catalog.filter(p=>p.name.toLowerCase().includes(q)&&!picks.some((n,i)=>i!==index&&n===p.name)).slice(0,7);
+      if(q&&!catalog.some(p=>p.name.toLowerCase()===q)&&!picks.some((n,i)=>i!==index&&n.toLowerCase()===q)) options.push({name:input.value.trim(),snippet:'Search this exact model on the web · not in starter catalog'});
+      options.forEach((product,i)=>{const option=el('button');option.type='button';option.id=`option-${index}-${i}`;option.setAttribute('role','option');option.setAttribute('aria-selected','false');option.append(el('strong',product.name),el('span',product.snippet));option.onmousedown=e=>e.preventDefault();option.onclick=()=>choose(product.name);menu.append(option);});
+      if(!options.length)menu.append(el('p','No other matching products. Try a different name.','small muted'));
+      menu.hidden=false; input.setAttribute('aria-expanded','true');
+    };
+    input.onfocus=show;
+    input.oninput=()=>{picks[index]='';syncSelection();show();};
+    input.onblur=()=>setTimeout(close,150);
+    input.onkeydown=e=>{
+      if(e.key==='Escape'){close();return;}
+      if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();if(menu.hidden)show();if(!options.length)return;active=(active+(e.key==='ArrowDown'?1:-1)+options.length)%options.length;Array.from(menu.children).forEach((n,i)=>n.setAttribute('aria-selected',String(i===active)));input.setAttribute('aria-activedescendant',`option-${index}-${active}`);}
+      if(e.key==='Enter'&&!menu.hidden){e.preventDefault();if(options.length)choose(options[active<0?0:active].name);}
+    };
+    wrap.append(label,input,menu);
+    if(picks.length>2){const remove=el('button','Remove','text-button');remove.type='button';remove.setAttribute('aria-label',`Remove product ${index+1}`);remove.onclick=()=>{picks.splice(index,1);syncSelection();drawDropdowns();};wrap.append(remove);}
+    $('productDropdowns').append(wrap);
+  });
+  $('addProduct').hidden=picks.length>=4;
 }
-$('catalogSearch').addEventListener('input',drawCatalog); drawCatalog();
-$('query').addEventListener('input',()=>{selected.clear();$('selectedProducts').replaceChildren();$('pickerStatus').textContent='Using custom text search.';drawCatalog();});
+$('addProduct').onclick=()=>{if(picks.length<4){picks.push('');drawDropdowns();$(`product-pick-${picks.length-1}`).focus();}};
+drawDropdowns();
+$('query').addEventListener('input',()=>{selected.clear();picks=picks.map(()=> '');drawDropdowns();$('pickerStatus').textContent='Using custom text search.';});
 function numericCharts(data, sources) {
   const grid=el('section',null,'metric-grid'); grid.setAttribute('aria-label','Comparable specifications');
   for(const row of data.rows) {
@@ -61,7 +92,7 @@ function numericCharts(data, sources) {
   return grid;
 }
 document.querySelectorAll('[data-query]').forEach(button => button.onclick = () => {
-  selected.clear(); $('selectedProducts').replaceChildren(); drawCatalog(); $('query').value = button.dataset.query; $('query').focus();
+  selected.clear(); picks=['','']; drawDropdowns(); $('query').value = button.dataset.query; $('query').focus();
 });
 $('query').addEventListener('keydown', event => {
   if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); $('compareForm').requestSubmit(); }
