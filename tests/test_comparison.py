@@ -51,7 +51,7 @@ def isolate(monkeypatch):
 def test_home_and_missing_keys():
     with TestClient(app) as client:
         home = client.get("/")
-        assert home.status_code == 200 and "Just name them" in home.text
+        assert home.status_code == 200 and "Pick your shortlist" in home.text
         assert client.get("/legacy").status_code == 200
         result = client.post("/api/compare", json={"query": "Monitor Alpha vs Monitor Beta"})
         assert result.status_code == 503

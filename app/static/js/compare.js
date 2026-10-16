@@ -101,6 +101,7 @@ $('cancelResearch').onclick = () => controller?.abort();
 
 $('compareForm').onsubmit = async event => {
   event.preventDefault(); if (controller) return;
+  if($('query').value.trim().length<5){$('pickerStatus').textContent='Select at least two products, or type their names.';return;}
   $('errorPanel').hidden = true; $('results').hidden = true; $('loadingPanel').hidden = false;
   $('compareButton').disabled = true; $('compareButton').textContent = 'Researching…';
   $('loadingNote').textContent = 'Researching the products you named…';
@@ -108,7 +109,7 @@ $('compareForm').onsubmit = async event => {
   try {
     const headers = {'Content-Type': 'application/json'};
     const response = await fetch('/api/compare', {method: 'POST', headers,
-      body: JSON.stringify({query: $('query').value.trim(), country: $('country').value}), signal: controller.signal});
+      body: JSON.stringify({query: $('query').value.trim() + ($('priority').value ? `. Buying priority: ${$('priority').value}.` : ''), country: $('country').value}), signal: controller.signal});
     if (!response.headers.get("content-type")?.includes("application/json")) throw new Error("Research is temporarily unavailable. Please try again.");
     const data = await response.json();
     if (!response.ok) {
@@ -132,109 +133,68 @@ $('compareForm').onsubmit = async event => {
   }
 };
 
-function render(data) {
-  const root = $('results'); root.replaceChildren();
-  const sources = new Map(data.sources.map(s => [s.id, s]));
-  const head = el('div', null, 'result-heading'), heading = el('div');
-  heading.append(el('span', 'THE RESEARCH, SIDE BY SIDE', 'eyebrow'), el('h2', data.title),
-    el('div', `${data.country} · Researched ${new Date(data.checked_at).toLocaleString()} · ${data.sources.length} sources`, 'result-meta'));
-  const actions = el('div', null, 'result-actions'), download = el('button', 'Export research ↓', 'text-button');
-  download.onclick = () => {
-    const url = URL.createObjectURL(new Blob([JSON.stringify(currentResult, null, 2)], {type: 'application/json'}));
-    const a = el('a'); a.href = url; a.download = 'sidebyside-comparison.json'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
-  actions.append(download); head.append(heading, actions); root.append(head);
 
-  const verdict = el('div', null, 'verdict'), verdictBody = el('div');
-  verdictBody.append(el('h3', data.recommendation.verdict));
-  const reason=el('details'); reason.append(el('summary','Why this recommendation?'),el('p',data.recommendation.reason)); verdictBody.append(reason);
-  verdictBody.append(citations(data.recommendation.source_ids, sources));
-  verdict.append(el('div', data.recommendation.product_id ? 'OUR TAKE ↗' : 'THE EVIDENCE SO FAR', 'verdict-label'), verdictBody); root.append(verdict);
-  const cards = el('div', null, 'product-grid'); cards.style.setProperty('--count', data.products.length);
-  for (const [i, product] of data.products.entries()) {
-    const card = el('article', null, 'product-card');
-    card.append(el('span', `0${i+1} / THE OPTION`, 'product-number'), el('h3', product.name));
-    const productSources = data.sources.filter(source => source.product_id === product.id);
-    const photoCandidates = productSources.flatMap(source => (source.image_urls || []).filter(url => safeUrl(url)).map(url => ({source,url})));
-    const photoSource = photoCandidates[0]?.source;
-    const figure = el('figure', null, 'product-photo');
-    if (photoSource) {
-      const img = el('img'); img.alt = `${product.name} product photo`; img.referrerPolicy = 'no-referrer';
-      img.decoding = 'async'; img.loading = 'eager';
-      const caption = el('figcaption');
-      let photoIndex = -1, imageTimer;
-      const tryPhoto = () => {
-        clearTimeout(imageTimer);
-        const next = photoCandidates[++photoIndex];
-        if (!next) { figure.replaceChildren(el('span', 'Photo could not be loaded', 'muted')); return; }
-        caption.replaceChildren(sourceLink(next.source, `Image: ${new URL(next.source.url).hostname}`));
-        img.src = next.url;
-        imageTimer = setTimeout(tryPhoto, 6000);
-      };
-      img.onerror = tryPhoto;
-      img.onload = () => {
-        clearTimeout(imageTimer);
-        if(img.naturalWidth < 120 || img.naturalHeight < 100) tryPhoto();
-        else figure.classList.add('photo-loaded');
-      };
-      figure.append(img, caption); tryPhoto();
-    } else { figure.append(el('span', 'Product photo not found', 'muted')); }
-    card.append(figure);
-    const sourceNav = el('details', null, 'product-websites'); sourceNav.append(el('summary', `Sources (${productSources.length})`));
-    productSources.forEach(source => sourceNav.append(sourceLink(source, `${new URL(source.url).hostname.replace(/^www\./, '')}`)));
-    card.append(sourceNav);
-    if (product.variant_note) card.append(el('p', product.variant_note, 'variant-note'));
-    const best = cited(product.best_for, sources); best.className = 'best-for'; card.append(best);
-    card.append(el('h4', 'COMPARE SELLER PRICES'));
-    card.append(el('p', 'Listed prices found during research. Search listings can lag behind seller updates; confirm final price and delivery at checkout.', 'small muted'));
-    const offers = [...product.offers].sort((a,b) => a.currency.localeCompare(b.currency) || a.amount-b.amount);
-    if (!offers.length) card.append(el('p', 'No direct seller price verified. Open the source websites above to check availability.', 'small muted'));
-    const sellerDetails=el("details"); sellerDetails.append(el("summary", `All seller offers (${offers.length})`));
-    for (const [offerIndex, offer] of offers.entries()) {
-      const source = sources.get(offer.source_id); if (!source) continue;
-      const box = el('div', null, 'seller-offer');
-      box.append(el('p', source.kind === 'page' ? 'Listed on seller page' : 'Listed in search result · seller page not verified', 'small muted'));
-      box.append(el('strong', offer.price_text), el('p', new URL(source.url).hostname.replace(/^www\./, ''), 'seller-name'));
-      box.append(el('p', `${offer.variant} · ${offer.condition} · ${offer.availability.replaceAll('_',' ')}`, 'small'));
-      box.append(el('p', `Shipping: ${offer.shipping || 'Not verified'}`, 'small muted'));
-      const peers = offers.filter(o => o.currency === offer.currency && o.variant === offer.variant && o.condition === 'new' && o.availability === 'in_stock');
-      if (offer.availability === 'in_stock' && peers.length > 1 && offer.amount === Math.min(...peers.map(o => o.amount))) box.append(el('span', 'Lowest observed for this variant', 'price-badge'));
-      const buy = sourceLink(source, offer.availability === 'out_of_stock' ? 'Check seller availability ↗' : 'View offer / Buy ↗'); buy.className = 'buy-link'; box.append(buy);
-      box.append(el('p', `Checked ${new Date(source.retrieved_at).toLocaleString()}`, 'small muted'));
-      const proof = el('details'); proof.append(el('summary', 'Price evidence'), el('p', offer.evidence_quote)); box.append(proof);
-      if(offerIndex===0) card.append(box); else sellerDetails.append(box);
-    }
-    if(offers.length>1)card.append(sellerDetails);
-    for (const [label, claims] of [['Why buy this', product.strengths], ['Why not buy this', product.limitations]]) {
-      const section=el('section',null,'buy-reasons');section.append(el('h4',label));const ul=el('ul');
-      if(!claims.length)ul.append(el('li','Not enough evidence yet.','unknown'));
-      claims.slice(0,2).forEach(claim=>ul.append(cited(claim,sources,'li')));section.append(ul);
-      if(claims.length>2){const more=el('details');more.append(el('summary','More reasons'));claims.slice(2).forEach(claim=>more.append(cited(claim,sources)));section.append(more);}card.append(section);
-    }
-    cards.append(card);
-  }
-  root.append(numericCharts(data,sources), cards);
-  const fullSpecs=el('details',null,'full-specs');fullSpecs.append(el('summary','Compare all specifications'));root.append(fullSpecs);
-  const scroller = el('div', null, 'table-scroll'); scroller.tabIndex = 0; scroller.setAttribute('aria-label', 'Scrollable product comparison');
-  const table = el('table'), thead = el('thead'), headerRow = el('tr');
-  headerRow.append(el('th', 'A closer look'));
-  data.products.forEach(p => { const th = el('th', p.name); th.scope = 'col'; headerRow.append(th); });
-  thead.append(headerRow); table.append(thead); const tbody = el('tbody');
-  for (const row of data.rows) {
-    const tr = el('tr'), label = el('th', row.attribute); label.scope = 'row'; tr.append(label);
-    row.values.forEach(v => { const td = el('td', v.value, v.value === 'Not verified' ? 'unknown' : ''); td.append(citations(v.source_ids, sources)); tr.append(td); });
-    tbody.append(tr);
-  }
-  table.append(tbody); scroller.append(table); fullSpecs.append(scroller);
-  const notes = [...data.assumptions, ...data.caveats, ...data.warnings];
-  if (notes.length) { const box = el('details', null, 'notes'); box.append(el('summary', 'Uncertainties and research notes'));  const ul = el('ul'); notes.forEach(n => ul.append(el('li', n))); box.append(ul); root.append(box); }
-  const details = el('details', null, 'sources'); details.append(el('summary', `Open the research trail · ${sources.size} sources`));
-  const list = el('ol', null, 'source-list');
-  data.sources.forEach(source => {
-    const li = el('li'); li.id = source.id;
-    li.append(el('div', `${source.id} / ${source.kind === 'page' ? 'PAGE EXTRACT' : 'SEARCH EXCERPT'}`, 'source-kind'), sourceLink(source),
-      el('p', source.excerpt), el('span', `Retrieved ${new Date(source.retrieved_at).toLocaleString()}`, 'muted'));
-    list.append(li);
-  });
-  details.append(list); root.append(details, el('p', 'AI-assisted synthesis of linked sources; details may be incomplete or incorrect. Prices are observed listings, not checkout quotes. Check the exact variant, delivery, and final price with the seller.', 'result-footnote'));
+function productPhoto(product, sources) {
+  const figure=el('figure',null,'product-photo');
+  const seen=new Set();
+  const candidates=sources.flatMap(source=>(source.image_urls||[]).filter(url=>safeUrl(url)&&!seen.has(url)&&seen.add(url)).map(url=>({source,url})));
+  candidates.sort((a,b)=>imagePenalty(a.url)-imagePenalty(b.url));
+  const img=el('img'),caption=el('figcaption');img.alt=`${product.name} product photo`;img.referrerPolicy='no-referrer';img.decoding='async';
+  let index=-1,timer;
+  function next(){clearTimeout(timer);const candidate=candidates[++index];if(!candidate){figure.replaceChildren(el('div','Photo unavailable','photo-placeholder'));return;}caption.replaceChildren(sourceLink(candidate.source,`Photo: ${new URL(candidate.source.url).hostname.replace(/^www\./,'')}`));img.src=candidate.url;timer=setTimeout(next,6000);}
+  img.onerror=next;img.onload=()=>{clearTimeout(timer);if(img.naturalWidth<120||img.naturalHeight<100)next();};figure.append(img,caption);next();return figure;
 }
+function imagePenalty(url){return /headband|microphone|controls|wearing|case|cable|test|graph/i.test(url)?10:0;}
+function rowCategory(row){const name=row.attribute.toLowerCase();if(/camera|video|photo/.test(name))return 'Camera';if(/battery|charg/.test(name))return 'Battery';if(/display|screen|resolution|refresh/.test(name))return 'Display';if(/processor|chip|ram|storage|performance/.test(name))return 'Performance';if(/weight|dimension|build|water|design/.test(name))return 'Design';return 'Other';}
+function render(data) {
+  const root=$('results');root.replaceChildren();const sources=new Map(data.sources.map(s=>[s.id,s]));
+  const head=el('div',null,'result-heading');const title=el('div');title.append(el('span','YOUR DECISION, SIMPLIFIED','eyebrow'),el('h2',`${data.products.length} products. A clearer choice.`),el('p',`${data.country} · Checked ${new Date(data.checked_at).toLocaleString()}`,'result-meta'));
+  const share=el('button','Share shortlist ↗','text-button');share.onclick=async()=>{const url=new URL(location.href);url.search='';url.searchParams.set('compare',data.products.map(p=>p.name).join(' vs '));try{await navigator.clipboard.writeText(url.href);share.textContent='Link copied';}catch{share.textContent='Copy link';const field=el('input');field.value=url.href;field.readOnly=true;head.append(field);field.select();}};head.append(title,share);root.append(head);
+  const missing=data.rows.reduce((n,r)=>n+r.values.filter(v=>v.value==='Not verified').length,0);
+  const trust=el('div',null,'trust-strip');trust.append(el('span',`${sources.size} linked sources`),el('span',`${data.rows.length} compared attributes`),el('span',missing?`${missing} unverified cells`:'All cells have source links'));root.append(trust);
+  const tabs=el('div',null,'result-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Comparison views');root.append(tabs);
+  const panels={};const buttons={};
+  function activate(key){Object.entries(panels).forEach(([k,p])=>{p.hidden=k!==key;buttons[k].setAttribute('aria-selected',String(k===key));buttons[k].tabIndex=k===key?0:-1;});}
+  for(const [key,label] of [['overview','Overview'],['differences','Key differences'],['specs','All specs'],['prices','Prices & stores'],['sources','Sources']]){
+    const b=el('button',label);b.id=`tab-${key}`;b.setAttribute('role','tab');b.setAttribute('aria-controls',`panel-${key}`);b.onclick=()=>activate(key);tabs.append(b);buttons[key]=b;
+    const panel=el('section',null,'result-panel');panel.id=`panel-${key}`;panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',b.id);panels[key]=panel;root.append(panel);
+    b.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const keys=Object.keys(buttons);let i=keys.indexOf(key);i=e.key==='Home'?0:e.key==='End'?keys.length-1:(i+(e.key==='ArrowRight'?1:-1)+keys.length)%keys.length;activate(keys[i]);buttons[keys[i]].focus();};
+  }
+  const verdict=el('div',null,'verdict');const verdictText=el('div');verdictText.append(el('h3',data.recommendation.verdict));const why=el('details');why.append(el('summary','See the reasoning'),el('p',data.recommendation.reason),citations(data.recommendation.source_ids,sources));verdictText.append(why);verdict.append(el('span','THE SHORT ANSWER','verdict-label'),verdictText);panels.overview.append(verdict);
+  const cards=el('div',null,'product-grid');cards.style.setProperty('--count',data.products.length);
+  for(const [i,p] of data.products.entries()){
+    const refs=data.sources.filter(s=>s.product_id===p.id),card=el('article',null,'product-card');
+    card.style.setProperty('--product-color',['#286b61','#b65e3a','#6261a0','#9b732f'][i]);
+    card.append(el('div',`OPTION 0${i+1}`,'product-number'),el('h3',p.name),productPhoto(p,refs));
+    card.append(el('span','BEST SUITED TO','card-kicker'),cited(p.best_for,sources));
+    const offers=p.offers.filter(o=>o.availability!=='out_of_stock');
+    const store=el('button',offers.length?`Explore ${offers.length} listed offer${offers.length===1?'':'s'} ↗`:'Check price coverage ↗','store-action');store.onclick=()=>activate('prices');card.append(store);
+    for(const [label,claims,type] of [['Why buy this',p.strengths,'positive'],['Why not buy this',p.limitations,'negative']]){const section=el('section',null,`buy-reasons ${type}`);section.append(el('h4',label));const ul=el('ul');claims.slice(0,2).forEach(c=>ul.append(cited(c,sources,'li')));if(!claims.length)ul.append(el('li','Not enough evidence yet.','muted'));section.append(ul);if(claims.length>2){const details=el('details');details.append(el('summary',`${claims.length-2} more reasons`));claims.slice(2).forEach(c=>details.append(cited(c,sources)));section.append(details);}card.append(section);}
+    if(p.variant_note){const note=el('details',null,'variant-detail');note.append(el('summary','Model & variant notes'),el('p',p.variant_note));card.append(note);}cards.append(card);
+    const sellerGroup=el('section',null,'seller-group');sellerGroup.append(el('h3',p.name));
+    if(!p.offers.length)sellerGroup.append(el('p','No seller price confirmed in this search. No estimate has been substituted.','empty-state'));
+    for(const offer of [...p.offers].sort((a,b)=>a.currency.localeCompare(b.currency)||a.amount-b.amount)){
+      const source=sources.get(offer.source_id);if(!source)continue;const box=el('article',null,'seller-offer');
+      const seller=el('div');seller.append(el('strong',new URL(source.url).hostname.replace(/^www\./,'')),el('p',`${offer.variant} · ${offer.availability.replaceAll('_',' ')}`,'small muted'));
+      const amount=el('div');let price=offer.price_text;try{price=new Intl.NumberFormat(undefined,{style:'currency',currency:offer.currency,maximumFractionDigits:2}).format(offer.amount);}catch{}amount.append(el('strong',price),el('p',/bank|coupon|exchange|cashback|emi/i.test(offer.price_text)?'Conditional offer — check evidence':'Observed listing','small muted'));
+      const link=sourceLink(source,'Visit store ↗');link.className='buy-link';box.append(seller,amount,link);
+      const proof=el('details',null,'offer-proof');proof.append(el('summary','Price details & evidence'),el('p',`Shipping: ${offer.shipping}. Condition: ${offer.condition}. ${source.kind==='page'?'Seller page extract':'Search listing, page not verified'}. Checked ${new Date(source.retrieved_at).toLocaleString()}.`),el('blockquote',offer.evidence_quote));box.append(proof);sellerGroup.append(box);
+    }
+    panels.prices.append(sellerGroup);
+  }
+  panels.overview.append(cards);
+  panels.prices.prepend(el('p','Compare the exact variant and final checkout total. Listed prices may exclude shipping or depend on an offer; this is not complete market coverage.','panel-intro'));
+  const charts=numericCharts(data,sources);panels.differences.append(el('h3','The numbers that separate them'),charts);
+  if(!charts.children.length)panels.differences.append(el('p','No directly comparable numeric measurements found. Compare the sourced differences below.','empty-state'));
+  function tableFor(rows){const scroller=el('div',null,'table-scroll');scroller.tabIndex=0;const table=el('table'),thead=el('thead'),tr=el('tr');tr.append(el('th','Attribute'));data.products.forEach(p=>{const th=el('th',p.name);th.scope='col';tr.append(th);});thead.append(tr);table.append(thead);const body=el('tbody');rows.forEach(r=>{const tr=el('tr'),th=el('th',r.attribute);th.scope='row';tr.append(th);r.values.forEach(v=>{const td=el('td',v.value,v.value==='Not verified'?'unknown':'');td.append(citations(v.source_ids,sources));tr.append(td);});body.append(tr);});table.append(body);scroller.append(table);return scroller;}
+  const differences=data.rows.filter(r=>new Set(r.values.map(v=>v.value.trim().toLowerCase())).size>1);panels.differences.append(el('p','Different reported values, not automatic quality rankings. Unknown values remain unverified.','panel-intro'),tableFor(differences));
+  const filterbar=el('div',null,'spec-filters'),search=el('input'),category=el('select'),onlyLabel=el('label'),only=el('input');search.type='search';search.placeholder='Find a specification…';search.setAttribute('aria-label','Find a specification');category.setAttribute('aria-label','Specification category');['All sections',...new Set(data.rows.map(rowCategory))].forEach(c=>{const o=el('option',c);o.value=c;category.append(o);});only.type='checkbox';onlyLabel.append(only,document.createTextNode(' Differences only'));filterbar.append(search,category,onlyLabel);const specRows=el('div');panels.specs.append(filterbar,specRows);
+  function filterSpecs(){const rows=data.rows.filter(r=>(!search.value||r.attribute.toLowerCase().includes(search.value.toLowerCase()))&&(category.value==='All sections'||rowCategory(r)===category.value)&&(!only.checked||differences.includes(r)));specRows.replaceChildren(rows.length?tableFor(rows):el('p','No matching specifications.','empty-state'));}
+  search.oninput=category.onchange=only.onchange=filterSpecs;filterSpecs();
+  const notes=el('details',null,'notes');notes.append(el('summary','Assumptions, gaps & conflicts'));[...data.assumptions,...data.caveats,...data.warnings].forEach(n=>notes.append(el('p',n)));panels.sources.append(notes);
+  const list=el('div',null,'source-list');data.sources.forEach(s=>{const item=el('article');item.append(el('span',`${s.kind==='page'?'PAGE EXTRACT':'SEARCH EXCERPT'} · ${new URL(s.url).hostname}`,'source-kind'),sourceLink(s),el('p',s.excerpt,'small muted'));list.append(item);});panels.sources.append(list);
+  const download=el('button','Download full research ↓','text-button');download.onclick=()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=el('a');a.href=url;a.download='comparison-research.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};panels.sources.append(download);
+  root.append(el('p','AI-assisted research, with sources. Specifications and image matches can be incomplete; verify critical details with the seller.','result-footnote'));activate('overview');
+}
+const sharedQuery = new URL(location.href).searchParams.get('compare');
+if(sharedQuery){$('query').value=sharedQuery.slice(0,600);picks=sharedQuery.split(/\s+vs\s+/i).slice(0,4);while(picks.length<2)picks.push('');drawDropdowns();$('pickerStatus').textContent='Shared shortlist loaded. Compare to fetch fresh research.';}

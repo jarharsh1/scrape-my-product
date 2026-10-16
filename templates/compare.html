@@ -14,25 +14,26 @@
 </head>
 <body>
   <header class="site-header wrap">
-    <a href="/" class="brand" aria-label="Side by Side home"><span class="brand-mark" aria-hidden="true">▥</span> side<span class="brand-light">by</span>side<span class="brand-dot">.</span></a>
+    <a href="/" class="brand" aria-label="Side by Side home"><span class="brand-mark" aria-hidden="true">▥</span> side<span class="brand-light">by</span>side<span class="brand-dot">.</span></a><span class="header-note">A clearer way to choose.</span>
   </header>
   <main class="wrap">
     <section class="hero" aria-labelledby="headline">
-      <div class="eyebrow"><span class="tiny-line"></span> A LITTLE CLARITY BEFORE YOU BUY</div>
-      <h1 id="headline">The products you’re torn between.<br><em>The differences that matter.</em></h1>
-      <p class="intro">Just name them. We’ll find the details, compare the tradeoffs,<br class="desktop-break"> and help you make up your mind.</p>
+      <div class="eyebrow"><span class="tiny-line"></span> LESS RESEARCH. BETTER DECISIONS.</div>
+      <h1 id="headline">Good choices start<br>with <em>clear differences.</em></h1>
+      <p class="intro">Pick your shortlist. See what matters, what it costs,<br class="desktop-break"> and which tradeoffs work for you.</p>
+      <div class="comparison-builder"><div class="builder-title"><span>Build your comparison</span><span class="small muted">2–4 products</span></div>
       <section class="picker" aria-label="Choose products">
         <div id="productDropdowns" class="product-dropdowns"></div>
         <button id="addProduct" type="button" class="text-button">+ Add another product</button>
         <p id="pickerStatus" class="small muted" role="status">Search and select 2–4 products.</p>
       </section>
       <form id="compareForm" class="search-card">
-        <label for="query">Or enter a comparison directly</label>
-        <textarea id="query" name="query" rows="1" maxlength="600" required minlength="5" placeholder="Sony WH-1000XM5 vs Bose QuietComfort Ultra"></textarea>
-        <div class="search-bottom"><span class="search-hint">Two to four products. All the research, handled.</span><button type="submit" class="primary" id="compareButton">Compare products <span aria-hidden="true">↗</span></button></div>
+        <details class="custom-query"><summary>Prefer to type a comparison?</summary><label for="query" class="sr-only">Products to compare</label>
+        <textarea id="query" name="query" rows="1" maxlength="600" minlength="5" placeholder="Sony WH-1000XM5 vs Bose QuietComfort Ultra"></textarea></details>
+        <div class="search-bottom"><label class="priority-label">What matters most?<select id="priority"><option value="">Balanced choice</option><option>Battery life</option><option>Camera quality</option><option>Performance</option><option>Comfort and portability</option><option>Value for money</option></select></label><button type="submit" class="primary" id="compareButton">Compare products <span aria-hidden="true">↗</span></button></div>
       </form>
-      <div class="search-options"><label>Shopping in <select id="country" aria-label="Shopping country"><option>India</option><option>United States</option><option>United Kingdom</option><option>Saudi Arabia</option><option>United Arab Emirates</option><option>Canada</option><option>Australia</option><option>Germany</option><option>Singapore</option></select></label><span>Names in. Clarity out.</span></div>
-      <div class="examples"><span>TRY A COMPARISON</span><button type="button" data-query="Sony WH-1000XM5 vs Bose QuietComfort Ultra">Headphones <span>↗</span></button><button type="button" data-query="Kindle Paperwhite vs Kobo Clara BW">E-readers <span>↗</span></button><button type="button" data-query="Dyson V12 Detect Slim vs Samsung Jet 75">Vacuum cleaners <span>↗</span></button></div>
+      <div class="search-options"><label>Shopping in <select id="country" aria-label="Shopping country"><option>India</option><option>United States</option><option>United Kingdom</option><option>Saudi Arabia</option><option>United Arab Emirates</option><option>Canada</option><option>Australia</option><option>Germany</option><option>Singapore</option></select></label><span>Source-linked research · No invented ratings</span></div>
+      </div><div class="examples"><span>TRY A COMPARISON</span><button type="button" data-query="Sony WH-1000XM5 vs Bose QuietComfort Ultra">Headphones <span>↗</span></button><button type="button" data-query="Kindle Paperwhite vs Kobo Clara BW">E-readers <span>↗</span></button><button type="button" data-query="Dyson V12 Detect Slim vs Samsung Jet 75">Vacuum cleaners <span>↗</span></button></div>
     </section>
 
     <section class="loading-panel" id="loadingPanel" hidden aria-live="polite" aria-label="Research progress"><div class="orbit" aria-hidden="true"></div><div><span class="eyebrow">YOUR RESEARCH IS UNDERWAY</span><h2>We’re connecting the dots.</h2><p>Finding product pages, checking the details, and putting the tradeoffs side by side. This can take up to three minutes.</p><p class="loading-note" id="loadingNote">Researching the products you named…</p><button class="text-button" id="cancelResearch" type="button">Cancel comparison</button></div></section>
