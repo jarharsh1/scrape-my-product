@@ -9,7 +9,7 @@ import json
 import os
 import re
 from datetime import datetime, timezone
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urlsplit, urlunsplit, unquote
 
 import httpx
 from pydantic import ValidationError
@@ -36,6 +36,20 @@ def public_url(value: str) -> str | None:
         return urlunsplit((parts.scheme, parts.netloc, parts.path, parts.query, ""))
     except ValueError:
         return None
+
+
+def matching_product_image(url: str, product: str) -> bool:
+    if not isinstance(url, str) or not public_url(url) or not url.startswith("https://"):
+        return False
+    path = unquote(urlsplit(url).path).lower()
+    if any(word in path for word in ["logo", "avatar", "banner", "review", "versus", ".svg", "thumbnail"]):
+        return False
+    tokens = re.findall(r"[a-z0-9]+", product.lower())
+    identifying = [t for t in tokens if any(c.isdigit() for c in t)]
+    meaningful = [t for t in tokens if len(t) > 3 and t not in {"wireless", "headphones", "generation", "ultra", "plus"}]
+    return bool(meaningful) and any(t in path for t in meaningful) and all(
+        re.search(r"(?<![a-z0-9])" + re.escape(t) + r"(?![a-z0-9])", path)
+        or (len(t) > 2 and t in path) for t in identifying)
 
 
 def now() -> str:
@@ -138,9 +152,7 @@ class ResearchService:
                 tokens = [t for t in re.findall(r"[a-z0-9]+", product.lower()) if len(t) > 3]
                 for entry in entries:
                     entry["images"] = [u for u in images.get(entry["url"], [])
-                        if isinstance(u, str) and public_url(u) and u.startswith("https://")
-                        and any(t in u.lower() for t in tokens)
-                        and not any(t in u.lower() for t in ["logo", "avatar", "icon", ".svg"])] [:3]
+                        if matching_product_image(u, product)][:3]
                     if pages.get(entry["url"]):
                         entry["content"] = pages[entry["url"]][:6000]
                         entry["full_page"] = True
@@ -198,7 +210,10 @@ class ResearchService:
             "installment as full price, convert currency, invent merchants or claim cheapest. If no confirmed "
             "offer use offers=[]. Do not include prices anywhere outside offers: no price table rows, price estimates in prose or cheapest claims. Recommendations must cite evidence and explain tradeoffs; product_id=null "
             "if evidence is insufficient to choose. Avoid medical efficacy/safety advice. Include missing "
-            "information and evidence conflicts in caveats. Keep descriptions concise and factual.",
+            "information and evidence conflicts in caveats. Keep each strength and limitation under 18 words; "
+            "best_for under 20 words. Use short numeric-only values with units for comparable metrics "
+            "such as battery life, weight, display size and storage; put test conditions in caveats. "
+            "Never rank a device based on rumors. Keep descriptions concise and factual.",
             {"query": query, "country": country, "focus": plan.focus,
              "products": [{"id": f"p{i+1}", "requested_name": p} for i, p in enumerate(plan.products)],
              "evidence": evidence})

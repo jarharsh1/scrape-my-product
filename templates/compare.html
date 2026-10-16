@@ -21,9 +21,17 @@
       <div class="eyebrow"><span class="tiny-line"></span> A LITTLE CLARITY BEFORE YOU BUY</div>
       <h1 id="headline">The products you’re torn between.<br><em>The differences that matter.</em></h1>
       <p class="intro">Just name them. We’ll find the details, compare the tradeoffs,<br class="desktop-break"> and help you make up your mind.</p>
+      <section class="picker" aria-label="Choose products">
+        <h2>Pick your products</h2>
+        <label for="catalogSearch">Search the starter catalog</label>
+        <input id="catalogSearch" type="search" placeholder="Search phones, headphones, e-readers…" autocomplete="off">
+        <div id="catalogList" class="catalog-list"></div>
+        <div id="selectedProducts" class="selected-products" aria-live="polite"></div>
+        <p id="pickerStatus" class="small muted" role="status">Choose 2–4 products, or use the text search below.</p>
+      </section>
       <form id="compareForm" class="search-card">
-        <label for="query" class="sr-only">Products to compare</label>
-        <textarea id="query" name="query" rows="2" maxlength="600" required minlength="5" placeholder="Sony WH-1000XM5 vs Bose QuietComfort Ultra"></textarea>
+        <label for="query" >Products to compare</label>
+        <textarea id="query" name="query" rows="1" maxlength="600" required minlength="5" placeholder="Sony WH-1000XM5 vs Bose QuietComfort Ultra"></textarea>
         <div class="search-bottom"><span class="search-hint">Two to four products. All the research, handled.</span><button type="submit" class="primary" id="compareButton">Compare products <span aria-hidden="true">↗</span></button></div>
       </form>
       <div class="search-options"><label>Shopping in <select id="country" aria-label="Shopping country"><option>India</option><option>United States</option><option>United Kingdom</option><option>Saudi Arabia</option><option>United Arab Emirates</option><option>Canada</option><option>Australia</option><option>Germany</option><option>Singapore</option></select></label><span>Names in. Clarity out.</span></div>

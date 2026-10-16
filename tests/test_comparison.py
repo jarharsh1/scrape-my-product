@@ -243,3 +243,11 @@ def test_price_tracker_is_not_a_buying_offer():
     refs[0].url = "https://pricehistory.app/p/monitor"
     validate_evidence(draft, refs, 2, [{"id": "p1-s1", "content": "INR 9999"}])
     assert draft.products[0].offers == []
+
+
+def test_images_reject_wrong_generation_and_review_banner():
+    from app.services.research import matching_product_image
+    assert matching_product_image("https://cdn.example.com/sony-wh-1000xm5.jpg", "Sony WH-1000XM5")
+    assert not matching_product_image("https://cdn.example.com/sony-wh-1000xm4.jpg", "Sony WH-1000XM5")
+    assert not matching_product_image("https://cdn.example.com/sony-wh-1000xm5-review.jpg", "Sony WH-1000XM5")
+    assert not matching_product_image("https://cdn.example.com/momentum-3.jpg", "Sennheiser Momentum 4 Wireless")
