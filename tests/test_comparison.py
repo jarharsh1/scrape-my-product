@@ -251,3 +251,11 @@ def test_images_reject_wrong_generation_and_review_banner():
     assert not matching_product_image("https://cdn.example.com/sony-wh-1000xm4.jpg", "Sony WH-1000XM5")
     assert not matching_product_image("https://cdn.example.com/sony-wh-1000xm5-review.jpg", "Sony WH-1000XM5")
     assert not matching_product_image("https://cdn.example.com/momentum-3.jpg", "Sennheiser Momentum 4 Wireless")
+
+
+def test_described_images_allow_opaque_cdn_urls():
+    from app.services.research import image_candidates
+    items = [{"url": "https://cdn.example.com/a8f9.jpg", "description": "Sony WH-1000XM5 black headphones product photo"},
+             {"url": "https://cdn.example.com/other.jpg", "description": "Sony WH-1000XM4 headphones"},
+             {"url": "https://cdn.example.com/banner.jpg", "description": "Sony WH-1000XM5 comparison collage"}]
+    assert image_candidates(items, "Sony WH-1000XM5") == ["https://cdn.example.com/a8f9.jpg"]

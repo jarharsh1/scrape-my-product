@@ -52,6 +52,24 @@ def matching_product_image(url: str, product: str) -> bool:
         or (len(t) > 2 and t in path) for t in identifying)
 
 
+def image_candidates(items: list, product: str) -> list[str]:
+    candidates = []
+    parts = re.findall(r"[a-z0-9]+", product.lower())
+    required = [p for p in parts if p not in {"wireless", "headphones", "headphone", "generation", "the"}]
+    for item in items:
+        url = item.get("url", "") if isinstance(item, dict) else item
+        description = item.get("description", "") if isinstance(item, dict) else ""
+        if not isinstance(url, str) or not public_url(url) or not url.startswith("https://"):
+            continue
+        compact = re.sub(r"[^a-z0-9]", "", description.lower())
+        described = bool(required) and all(re.sub(r"[^a-z0-9]", "", token) in compact for token in required)
+        if described and any(word in description.lower() for word in ["logo", "banner", "infographic", "comparison", "collage", "versus"]):
+            described = False
+        if (described or matching_product_image(url, product)) and url not in candidates:
+            candidates.append(url)
+    return candidates[:8]
+
+
 def now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -108,6 +126,7 @@ class ResearchService:
         response = await self.post("Tavily", "https://api.tavily.com/search", {
             "query": query, "search_depth": "basic", "max_results": 4,
             "include_answer": False, "include_raw_content": False,
+            "include_images": True, "include_image_descriptions": True,
         })
         return response.get("results", [])
 
@@ -130,7 +149,7 @@ class ResearchService:
                 if not url or url in seen or not content.strip():
                     continue
                 seen.add(url)
-                entries.append({"url": url, "title": item.get("title") or url, "content": content[:6000]})
+                entries.append({"url": url, "title": item.get("title") or url, "content": content[:6000], "images": image_candidates(item.get("images", []), product)})
         # At most six distinct sources and two full pages per product.
         # Prefer distinct websites before filling remaining source slots.
         unique, remaining, domains = [], [], set()
@@ -151,8 +170,8 @@ class ResearchService:
                 images = {r.get("url"): r.get("images", []) for r in extracted.get("results", [])}
                 tokens = [t for t in re.findall(r"[a-z0-9]+", product.lower()) if len(t) > 3]
                 for entry in entries:
-                    entry["images"] = [u for u in images.get(entry["url"], [])
-                        if matching_product_image(u, product)][:3]
+                    entry["images"] = list(dict.fromkeys(entry.get("images", []) +
+                        image_candidates(images.get(entry["url"], []), product)))[:8]
                     if pages.get(entry["url"]):
                         entry["content"] = pages[entry["url"]][:6000]
                         entry["full_page"] = True

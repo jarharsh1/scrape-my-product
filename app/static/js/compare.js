@@ -127,17 +127,26 @@ function render(data) {
     const photoSource = photoCandidates[0]?.source;
     const figure = el('figure', null, 'product-photo');
     if (photoSource) {
-      const img = el('img'); img.src = photoSource.image_urls.find(url => safeUrl(url));
-      img.alt = `${product.name} - image from source website`; img.loading = 'lazy'; img.referrerPolicy = 'no-referrer';
-      let photoIndex = 0;
-      img.onerror = () => {
+      const img = el('img'); img.alt = `${product.name} product photo`; img.referrerPolicy = 'no-referrer';
+      img.decoding = 'async'; img.loading = 'eager';
+      const caption = el('figcaption');
+      let photoIndex = -1, imageTimer;
+      const tryPhoto = () => {
+        clearTimeout(imageTimer);
         const next = photoCandidates[++photoIndex];
-        if (next) { img.src = next.url; caption.replaceChildren(sourceLink(next.source, `Image: ${new URL(next.source.url).hostname}`)); }
-        else figure.replaceChildren(el('span', 'Image unavailable', 'muted'));
+        if (!next) { figure.replaceChildren(el('span', 'Photo could not be loaded', 'muted')); return; }
+        caption.replaceChildren(sourceLink(next.source, `Image: ${new URL(next.source.url).hostname}`));
+        img.src = next.url;
+        imageTimer = setTimeout(tryPhoto, 6000);
       };
-      const caption = el('figcaption'); caption.append(sourceLink(photoSource, `Image: ${new URL(photoSource.url).hostname}`));
-      figure.append(img, caption);
-    } else { figure.append(el('span', 'No matching product image found', 'muted')); }
+      img.onerror = tryPhoto;
+      img.onload = () => {
+        clearTimeout(imageTimer);
+        if(img.naturalWidth < 120 || img.naturalHeight < 100) tryPhoto();
+        else figure.classList.add('photo-loaded');
+      };
+      figure.append(img, caption); tryPhoto();
+    } else { figure.append(el('span', 'Product photo not found', 'muted')); }
     card.append(figure);
     const sourceNav = el('details', null, 'product-websites'); sourceNav.append(el('summary', `Sources (${productSources.length})`));
     productSources.forEach(source => sourceNav.append(sourceLink(source, `${new URL(source.url).hostname.replace(/^www\./, '')}`)));
