@@ -2,6 +2,7 @@
 const $ = id => document.getElementById(id);
 let controller = null;
 let currentResult = null;
+const recentComparisons = new Map();
 
 function el(tag, text, className) {
   const node = document.createElement(tag === 'details' ? 'section' : tag === 'summary' ? 'h4' : tag);
@@ -102,6 +103,10 @@ $('cancelResearch').onclick = () => controller?.abort();
 $('compareForm').onsubmit = async event => {
   event.preventDefault(); if (controller) return;
   if($('query').value.trim().length<5){$('pickerStatus').textContent='Select at least two products, or type their names.';return;}
+  const requestQuery=$('query').value.trim() + ($('priority').value ? `. Buying priority: ${$('priority').value}.` : '');
+  const cacheKey=JSON.stringify([requestQuery,$('country').value]);
+  const recent=recentComparisons.get(cacheKey);
+  if(recent && Date.now()-recent.time<120000){currentResult=recent.data;render(recent.data);$('errorPanel').hidden=true;$('results').hidden=false;$('results').focus();return;}
   $('errorPanel').hidden = true; $('results').hidden = true; $('loadingPanel').hidden = false;
   $('compareButton').disabled = true; $('compareButton').textContent = 'Researching…';
   $('loadingNote').textContent = 'Researching the products you named…';
@@ -117,6 +122,7 @@ $('compareForm').onsubmit = async event => {
       const message = typeof detail === 'string' ? detail : detail?.message || 'Please enter 2–4 product names and try again.';
       const error = new Error(message); error.setup = detail?.code === 'setup_required' || response.status === 401; throw error;
     }
+    recentComparisons.set(cacheKey,{time:Date.now(),data});if(recentComparisons.size>10)recentComparisons.delete(recentComparisons.keys().next().value);
     currentResult = data; render(data); $('results').hidden = false; $('results').focus();
   } catch (error) {
     if (error.name === 'AbortError') {

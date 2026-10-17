@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.models.comparison import ComparisonDraft, Credentials, Source
 from app.routes.compare import _visitors
-from app.services.research import _research_cache, ResearchError, ResearchService, public_url, validate_evidence
+from app.services.research import _comparison_cache, _research_cache, ResearchError, ResearchService, public_url, validate_evidence
 
 
 def draft_data():
@@ -47,6 +47,7 @@ def isolate(monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     _visitors.clear()
     _research_cache.clear()
+    _comparison_cache.clear()
 
 
 def test_home_and_missing_keys():
@@ -289,5 +290,32 @@ def test_product_research_cache_isolated_and_expiring(monkeypatch):
             assert len(calls) == 2
             clock[0] = 401
             await service.discover(0, "Phone A", "India")
+            assert len(calls) == 3
+    asyncio.run(run())
+
+def test_comparison_cache_preserves_timestamp_and_expires(monkeypatch):
+    import asyncio
+    import app.services.research as module
+    from app.models.comparison import ComparisonResult
+    calls = []
+    async def compute(self, query, country):
+        calls.append(country)
+        return ComparisonResult(**draft_data(), query=query, country=country,
+            assumptions=[], sources=sources(), checked_at="2026-10-17T00:00:00Z", warnings=[])
+    monkeypatch.setattr(ResearchService, "_compare", compute)
+    clock = [100]
+    monkeypatch.setattr(module.time, "monotonic", lambda: clock[0])
+    async def run():
+        async with httpx.AsyncClient() as client:
+            service = ResearchService(client, Credentials(tavily="test", openai="test"))
+            a = await service.compare("A vs B", "India")
+            b = await service.compare("A vs B", "India")
+            assert len(calls) == 1 and a.checked_at == b.checked_at
+            a.products.clear()
+            assert len(b.products) == 2
+            await service.compare("A vs B", "Canada")
+            assert len(calls) == 2
+            clock[0] = 221
+            await service.compare("A vs B", "India")
             assert len(calls) == 3
     asyncio.run(run())
