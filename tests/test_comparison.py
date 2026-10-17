@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.models.comparison import ComparisonDraft, Credentials, Source
 from app.routes.compare import _visitors
-from app.services.research import ResearchError, ResearchService, public_url, validate_evidence
+from app.services.research import _research_cache, ResearchError, ResearchService, public_url, validate_evidence
 
 
 def draft_data():
@@ -46,6 +46,7 @@ def isolate(monkeypatch):
     monkeypatch.delenv("TAVILY_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     _visitors.clear()
+    _research_cache.clear()
 
 
 def test_home_and_missing_keys():
@@ -265,3 +266,28 @@ def test_optional_image_metadata_is_safe():
     from app.services.research import image_candidates
     assert image_candidates(None, "Sony WH-1000XM5") == []
     assert image_candidates([{"url":"https://cdn.example.com/random.jpg", "description":None}], "Sony WH-1000XM5") == []
+
+def test_product_research_cache_isolated_and_expiring(monkeypatch):
+    import asyncio
+    import app.services.research as module
+    calls = []
+    async def discover(self, index, product, country):
+        calls.append((index, product, country))
+        return [sources()[0]], [], []
+    monkeypatch.setattr(ResearchService, "_discover", discover)
+    clock = [100]
+    monkeypatch.setattr(module.time, "monotonic", lambda: clock[0])
+    async def run():
+        async with httpx.AsyncClient() as client:
+            service = ResearchService(client, Credentials(tavily="test", openai="test"))
+            first = await service.discover(0, "Phone A", "India")
+            first[0].clear()
+            second = await service.discover(0, "Phone A", "India")
+            assert len(second[0]) == 1
+            assert len(calls) == 1
+            await service.discover(0, "Phone A", "Canada")
+            assert len(calls) == 2
+            clock[0] = 401
+            await service.discover(0, "Phone A", "India")
+            assert len(calls) == 3
+    asyncio.run(run())
