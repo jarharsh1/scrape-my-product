@@ -26,8 +26,8 @@
         <p id="pickerStatus" class="small muted" role="status">Search and select 2–4 products.</p>
       </section>
       <form id="compareForm" class="search-card">
-        <details class="custom-query"><summary>Paste product names</summary><label for="query" class="sr-only">Products to compare</label>
-        <textarea id="query" name="query" rows="1" maxlength="600" minlength="5" placeholder="Sony WH-1000XM5 vs Bose QuietComfort Ultra"></textarea></details>
+        <div class="custom-query"><label for="query">Or paste a comparison</label><label for="query" class="sr-only">Products to compare</label>
+        <textarea id="query" name="query" rows="1" maxlength="600" minlength="5" placeholder="Sony WH-1000XM5 vs Bose QuietComfort Ultra"></textarea></div>
         <div class="search-bottom"><label class="priority-label">Priority<select id="priority"><option value="">No preference</option><option>Battery life</option><option>Camera quality</option><option>Performance</option><option>Comfort and portability</option><option>Value for money</option></select></label><button type="submit" class="primary" id="compareButton">Compare products <span aria-hidden="true">↗</span></button></div>
       </form>
       <div class="search-options"><label>Shopping in <select id="country" aria-label="Shopping country"><option>India</option><option>United States</option><option>United Kingdom</option><option>Saudi Arabia</option><option>United Arab Emirates</option><option>Canada</option><option>Australia</option><option>Germany</option><option>Singapore</option></select></label><span></span></div>

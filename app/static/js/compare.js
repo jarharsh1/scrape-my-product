@@ -4,7 +4,7 @@ let controller = null;
 let currentResult = null;
 
 function el(tag, text, className) {
-  const node = document.createElement(tag);
+  const node = document.createElement(tag === 'details' ? 'section' : tag === 'summary' ? 'h4' : tag);
   if (text !== undefined && text !== null) node.textContent = text;
   if (className) node.className = className;
   return node;
@@ -175,7 +175,7 @@ function render(data) {
       price.append(el('span',source.kind==='page'?'Listed price · check checkout total':'Search price · confirm at store','small muted'));card.append(price);
     }else card.append(el('p','Price unavailable','price-unavailable'));
     const store=el('button',offers.length?`${offers.length} offer${offers.length===1?'':'s'} →`:'Check stores →','store-action');store.onclick=()=>activate('prices');card.append(store);
-    for(const [label,claims,type] of [['Why buy this',p.strengths,'positive'],['Why not buy this',p.limitations,'negative']]){const section=el('section',null,`buy-reasons ${type}`);section.append(el('h4',label));const ul=el('ul');claims.slice(0,1).forEach(c=>ul.append(cited(c,sources,'li')));if(!claims.length)ul.append(el('li','Not enough evidence yet.','muted'));section.append(ul);if(claims.length>1){const details=el('details');details.append(el('summary',`More`));claims.slice(1).forEach(c=>details.append(cited(c,sources)));section.append(details);}card.append(section);}
+    for(const [label,claims,type] of [['Why buy this',p.strengths,'positive'],['Why not buy this',p.limitations,'negative']]){const section=el('section',null,`buy-reasons ${type}`);section.append(el('h4',label));const ul=el('ul');claims.forEach(c=>ul.append(cited(c,sources,'li')));if(!claims.length)ul.append(el('li','Not enough evidence yet.','muted'));section.append(ul);card.append(section);}
     if(p.variant_note){const note=el('details',null,'variant-detail');note.append(el('summary','Model & variant notes'),el('p',p.variant_note));card.append(note);}cards.append(card);
     const sellerGroup=el('section',null,'seller-group');sellerGroup.append(el('h3',p.name));
     if(!p.offers.length)sellerGroup.append(el('p','No seller price confirmed in this search. No estimate has been substituted.','empty-state'));
@@ -188,7 +188,22 @@ function render(data) {
     }
     panels.prices.append(sellerGroup);
   }
-  panels.overview.append(cards,verdict);
+  const matrix=el('div',null,'table-scroll comparison-matrix');matrix.tabIndex=0;
+  matrix.setAttribute('aria-label','Product comparison. Scroll horizontally for more products.');
+  const grid=el('table');grid.style.setProperty('--count',data.products.length);
+  const header=el('thead'),headerRow=el('tr');headerRow.append(el('th','Compare'));
+  data.products.forEach(p=>{const cell=el('th',p.name);cell.scope='col';headerRow.append(cell);});header.append(headerRow);grid.append(header);
+  const body=el('tbody'),productCards=Array.from(cards.children);
+  for(const [label,match] of [
+    ['Product',n=>n.className==='product-photo'],
+    ['Price & stores',n=>['quick-price','price-unavailable','store-action'].includes(n.className)],
+    ['Why buy',n=>n.className==='buy-reasons positive'],
+    ['Why skip',n=>n.className==='buy-reasons negative'],
+    ['Variant',n=>n.className==='variant-detail']
+  ]){const row=el('tr'),labelCell=el('th',label);labelCell.scope='row';row.append(labelCell);
+    productCards.forEach(card=>{const cell=el('td');Array.from(card.children).filter(match).forEach(n=>cell.append(n));if(!cell.children.length)cell.append(el('span','—'));row.append(cell);});body.append(row);
+  }
+  grid.append(body);matrix.append(grid);panels.overview.append(matrix);
   panels.prices.prepend(el('p','Compare the exact variant and final checkout total. Listed prices may exclude shipping or depend on an offer; this is not complete market coverage.','panel-intro'));
   const charts=numericCharts(data,sources);panels.differences.append(el('h3','The numbers that separate them'),charts);
   if(!charts.children.length)panels.differences.append(el('p','No directly comparable numeric measurements found. Compare the sourced differences below.','empty-state'));
