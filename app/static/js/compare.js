@@ -41,7 +41,7 @@ let picks = ['', ''];
 function syncSelection() {
   selected.clear(); picks.filter(Boolean).forEach(p=>selected.add(p));
   $('query').value = [...selected].join(' vs ');
-  $('pickerStatus').textContent = `${selected.size} products selected. Suggestions are a starter catalog; custom models are supported.`;
+  $('pickerStatus').textContent = `${selected.size} selected`;
 }
 function drawDropdowns() {
   $('productDropdowns').replaceChildren();
@@ -56,7 +56,7 @@ function drawDropdowns() {
     const show=()=>{
       const q=input.value.trim().toLowerCase(); active=-1;menu.replaceChildren();input.removeAttribute('aria-activedescendant');
       options=catalog.filter(p=>p.name.toLowerCase().includes(q)&&!picks.some((n,i)=>i!==index&&n===p.name)).slice(0,7);
-      if(q&&!catalog.some(p=>p.name.toLowerCase()===q)&&!picks.some((n,i)=>i!==index&&n.toLowerCase()===q)) options.push({name:input.value.trim(),snippet:'Search this exact model on the web · not in starter catalog'});
+      if(q&&!catalog.some(p=>p.name.toLowerCase()===q)&&!picks.some((n,i)=>i!==index&&n.toLowerCase()===q)) options.push({name:input.value.trim(),snippet:'Search this model'});
       options.forEach((product,i)=>{const option=el('button');option.type='button';option.id=`option-${index}-${i}`;option.setAttribute('role','option');option.setAttribute('aria-selected','false');option.append(el('strong',product.name),el('span',product.snippet));option.onmousedown=e=>e.preventDefault();option.onclick=()=>choose(product.name);menu.append(option);});
       if(!options.length)menu.append(el('p','No other matching products. Try a different name.','small muted'));
       menu.hidden=false; input.setAttribute('aria-expanded','true');
@@ -92,7 +92,7 @@ function numericCharts(data, sources) {
   return grid;
 }
 document.querySelectorAll('[data-query]').forEach(button => button.onclick = () => {
-  selected.clear(); picks=['','']; drawDropdowns(); $('query').value = button.dataset.query; $('query').focus();
+  picks=button.dataset.query.split(' vs ');syncSelection();drawDropdowns();$('compareButton').focus();
 });
 $('query').addEventListener('keydown', event => {
   if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); $('compareForm').requestSubmit(); }
@@ -148,10 +148,10 @@ function imagePenalty(url){return /headband|microphone|controls|wearing|case|cab
 function rowCategory(row){const name=row.attribute.toLowerCase();if(/camera|video|photo/.test(name))return 'Camera';if(/battery|charg/.test(name))return 'Battery';if(/display|screen|resolution|refresh/.test(name))return 'Display';if(/processor|chip|ram|storage|performance/.test(name))return 'Performance';if(/weight|dimension|build|water|design/.test(name))return 'Design';return 'Other';}
 function render(data) {
   const root=$('results');root.replaceChildren();const sources=new Map(data.sources.map(s=>[s.id,s]));
-  const head=el('div',null,'result-heading');const title=el('div');title.append(el('span','YOUR DECISION, SIMPLIFIED','eyebrow'),el('h2',`${data.products.length} products. A clearer choice.`),el('p',`${data.country} · Checked ${new Date(data.checked_at).toLocaleString()}`,'result-meta'));
+  const head=el('div',null,'result-heading');const title=el('div');title.append(el('p',`${data.country} · Checked ${new Date(data.checked_at).toLocaleString()}`,'result-meta'));
   const share=el('button','Share shortlist ↗','text-button');share.onclick=async()=>{const url=new URL(location.href);url.search='';url.searchParams.set('compare',data.products.map(p=>p.name).join(' vs '));try{await navigator.clipboard.writeText(url.href);share.textContent='Link copied';}catch{share.textContent='Copy link';const field=el('input');field.value=url.href;field.readOnly=true;head.append(field);field.select();}};head.append(title,share);root.append(head);
   const missing=data.rows.reduce((n,r)=>n+r.values.filter(v=>v.value==='Not verified').length,0);
-  const trust=el('div',null,'trust-strip');trust.append(el('span',`${sources.size} linked sources`),el('span',`${data.rows.length} compared attributes`),el('span',missing?`${missing} unverified cells`:'All cells have source links'));root.append(trust);
+  const trust=el('div',null,'trust-strip');trust.append(el('span',`${sources.size} linked sources`),el('span',`${data.rows.length} compared attributes`),el('span',missing?`${missing} unverified cells`:'All cells have source links'));
   const tabs=el('div',null,'result-tabs');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Comparison views');root.append(tabs);
   const panels={};const buttons={};
   function activate(key){Object.entries(panels).forEach(([k,p])=>{p.hidden=k!==key;buttons[k].setAttribute('aria-selected',String(k===key));buttons[k].tabIndex=k===key?0:-1;});}
@@ -160,16 +160,22 @@ function render(data) {
     const panel=el('section',null,'result-panel');panel.id=`panel-${key}`;panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',b.id);panels[key]=panel;root.append(panel);
     b.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const keys=Object.keys(buttons);let i=keys.indexOf(key);i=e.key==='Home'?0:e.key==='End'?keys.length-1:(i+(e.key==='ArrowRight'?1:-1)+keys.length)%keys.length;activate(keys[i]);buttons[keys[i]].focus();};
   }
-  const verdict=el('div',null,'verdict');const verdictText=el('div');verdictText.append(el('h3',data.recommendation.verdict));const why=el('details');why.append(el('summary','See the reasoning'),el('p',data.recommendation.reason),citations(data.recommendation.source_ids,sources));verdictText.append(why);verdict.append(el('span','THE SHORT ANSWER','verdict-label'),verdictText);panels.overview.append(verdict);
+  const verdict=el('details',null,'verdict');verdict.append(el('summary','Which should I choose?'));const verdictText=el('div');verdictText.append(el('h3',data.recommendation.verdict));const why=el('details');why.append(el('summary','See the reasoning'),el('p',data.recommendation.reason),citations(data.recommendation.source_ids,sources));verdictText.append(why);verdict.append(el('span','THE SHORT ANSWER','verdict-label'),verdictText);
   const cards=el('div',null,'product-grid');cards.style.setProperty('--count',data.products.length);
   for(const [i,p] of data.products.entries()){
     const refs=data.sources.filter(s=>s.product_id===p.id),card=el('article',null,'product-card');
     card.style.setProperty('--product-color',['#286b61','#b65e3a','#6261a0','#9b732f'][i]);
-    card.append(el('div',`OPTION 0${i+1}`,'product-number'),el('h3',p.name),productPhoto(p,refs));
-    card.append(el('span','BEST SUITED TO','card-kicker'),cited(p.best_for,sources));
+    card.append(productPhoto(p,refs),el('h3',p.name));
+    
     const offers=p.offers.filter(o=>o.availability!=='out_of_stock');
-    const store=el('button',offers.length?`Explore ${offers.length} listed offer${offers.length===1?'':'s'} ↗`:'Check price coverage ↗','store-action');store.onclick=()=>activate('prices');card.append(store);
-    for(const [label,claims,type] of [['Why buy this',p.strengths,'positive'],['Why not buy this',p.limitations,'negative']]){const section=el('section',null,`buy-reasons ${type}`);section.append(el('h4',label));const ul=el('ul');claims.slice(0,2).forEach(c=>ul.append(cited(c,sources,'li')));if(!claims.length)ul.append(el('li','Not enough evidence yet.','muted'));section.append(ul);if(claims.length>2){const details=el('details');details.append(el('summary',`${claims.length-2} more reasons`));claims.slice(2).forEach(c=>details.append(cited(c,sources)));section.append(details);}card.append(section);}
+    const priced=offers.filter(o=>sources.has(o.source_id));
+    if(priced.length){const currency=priced[0].currency;const same=priced.filter(o=>o.currency===currency).sort((a,b)=>a.amount-b.amount);const offer=same[0];const source=sources.get(offer.source_id);
+      const price=el('div',null,'quick-price');price.append(el('strong',new Intl.NumberFormat(undefined,{style:'currency',currency:offer.currency,maximumFractionDigits:2}).format(offer.amount)),el('span',offer.variant,'small muted'));
+      const buy=sourceLink(source,'View at '+new URL(source.url).hostname.replace(/^www\./,'' )+' ↗');buy.className='quick-buy';price.append(buy);
+      price.append(el('span',source.kind==='page'?'Listed price · check checkout total':'Search price · confirm at store','small muted'));card.append(price);
+    }else card.append(el('p','Price unavailable','price-unavailable'));
+    const store=el('button',offers.length?`${offers.length} offer${offers.length===1?'':'s'} →`:'Check stores →','store-action');store.onclick=()=>activate('prices');card.append(store);
+    for(const [label,claims,type] of [['Why buy this',p.strengths,'positive'],['Why not buy this',p.limitations,'negative']]){const section=el('section',null,`buy-reasons ${type}`);section.append(el('h4',label));const ul=el('ul');claims.slice(0,1).forEach(c=>ul.append(cited(c,sources,'li')));if(!claims.length)ul.append(el('li','Not enough evidence yet.','muted'));section.append(ul);if(claims.length>1){const details=el('details');details.append(el('summary',`More`));claims.slice(1).forEach(c=>details.append(cited(c,sources)));section.append(details);}card.append(section);}
     if(p.variant_note){const note=el('details',null,'variant-detail');note.append(el('summary','Model & variant notes'),el('p',p.variant_note));card.append(note);}cards.append(card);
     const sellerGroup=el('section',null,'seller-group');sellerGroup.append(el('h3',p.name));
     if(!p.offers.length)sellerGroup.append(el('p','No seller price confirmed in this search. No estimate has been substituted.','empty-state'));
@@ -182,7 +188,7 @@ function render(data) {
     }
     panels.prices.append(sellerGroup);
   }
-  panels.overview.append(cards);
+  panels.overview.append(cards,verdict);
   panels.prices.prepend(el('p','Compare the exact variant and final checkout total. Listed prices may exclude shipping or depend on an offer; this is not complete market coverage.','panel-intro'));
   const charts=numericCharts(data,sources);panels.differences.append(el('h3','The numbers that separate them'),charts);
   if(!charts.children.length)panels.differences.append(el('p','No directly comparable numeric measurements found. Compare the sourced differences below.','empty-state'));
@@ -194,7 +200,7 @@ function render(data) {
   const notes=el('details',null,'notes');notes.append(el('summary','Assumptions, gaps & conflicts'));[...data.assumptions,...data.caveats,...data.warnings].forEach(n=>notes.append(el('p',n)));panels.sources.append(notes);
   const list=el('div',null,'source-list');data.sources.forEach(s=>{const item=el('article');item.append(el('span',`${s.kind==='page'?'PAGE EXTRACT':'SEARCH EXCERPT'} · ${new URL(s.url).hostname}`,'source-kind'),sourceLink(s),el('p',s.excerpt,'small muted'));list.append(item);});panels.sources.append(list);
   const download=el('button','Download full research ↓','text-button');download.onclick=()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=el('a');a.href=url;a.download='comparison-research.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};panels.sources.append(download);
-  root.append(el('p','AI-assisted research, with sources. Specifications and image matches can be incomplete; verify critical details with the seller.','result-footnote'));activate('overview');
+  root.append(el('p','Prices and availability may change.','result-footnote'));activate('overview');
 }
 const sharedQuery = new URL(location.href).searchParams.get('compare');
 if(sharedQuery){$('query').value=sharedQuery.slice(0,600);picks=sharedQuery.split(/\s+vs\s+/i).slice(0,4);while(picks.length<2)picks.push('');drawDropdowns();$('pickerStatus').textContent='Shared shortlist loaded. Compare to fetch fresh research.';}

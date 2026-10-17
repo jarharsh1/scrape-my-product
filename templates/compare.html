@@ -14,34 +14,31 @@
 </head>
 <body>
   <header class="site-header wrap">
-    <a href="/" class="brand" aria-label="Side by Side home"><span class="brand-mark" aria-hidden="true">▥</span> side<span class="brand-light">by</span>side<span class="brand-dot">.</span></a><span class="header-note">A clearer way to choose.</span>
+    <a href="/" class="brand" aria-label="Side by Side home"><span class="brand-mark" aria-hidden="true">▥</span> side<span class="brand-light">by</span>side<span class="brand-dot">.</span></a><span class="header-note">Compare before you buy.</span>
   </header>
   <main class="wrap">
     <section class="hero" aria-labelledby="headline">
-      <div class="eyebrow"><span class="tiny-line"></span> LESS RESEARCH. BETTER DECISIONS.</div>
-      <h1 id="headline">Good choices start<br>with <em>clear differences.</em></h1>
-      <p class="intro">Pick your shortlist. See what matters, what it costs,<br class="desktop-break"> and which tradeoffs work for you.</p>
-      <div class="comparison-builder"><div class="builder-title"><span>Build your comparison</span><span class="small muted">2–4 products</span></div>
+      <h1 id="headline">Compare products.</h1>
+      <div class="comparison-builder"><div class="builder-title"><span>Pick 2–4 products</span><span class="small muted">2–4 products</span></div>
       <section class="picker" aria-label="Choose products">
         <div id="productDropdowns" class="product-dropdowns"></div>
-        <button id="addProduct" type="button" class="text-button">+ Add another product</button>
+        <button id="addProduct" type="button" class="text-button">+ Add product</button>
         <p id="pickerStatus" class="small muted" role="status">Search and select 2–4 products.</p>
       </section>
       <form id="compareForm" class="search-card">
-        <details class="custom-query"><summary>Prefer to type a comparison?</summary><label for="query" class="sr-only">Products to compare</label>
+        <details class="custom-query"><summary>Paste product names</summary><label for="query" class="sr-only">Products to compare</label>
         <textarea id="query" name="query" rows="1" maxlength="600" minlength="5" placeholder="Sony WH-1000XM5 vs Bose QuietComfort Ultra"></textarea></details>
-        <div class="search-bottom"><label class="priority-label">What matters most?<select id="priority"><option value="">Balanced choice</option><option>Battery life</option><option>Camera quality</option><option>Performance</option><option>Comfort and portability</option><option>Value for money</option></select></label><button type="submit" class="primary" id="compareButton">Compare products <span aria-hidden="true">↗</span></button></div>
+        <div class="search-bottom"><label class="priority-label">Priority<select id="priority"><option value="">No preference</option><option>Battery life</option><option>Camera quality</option><option>Performance</option><option>Comfort and portability</option><option>Value for money</option></select></label><button type="submit" class="primary" id="compareButton">Compare products <span aria-hidden="true">↗</span></button></div>
       </form>
-      <div class="search-options"><label>Shopping in <select id="country" aria-label="Shopping country"><option>India</option><option>United States</option><option>United Kingdom</option><option>Saudi Arabia</option><option>United Arab Emirates</option><option>Canada</option><option>Australia</option><option>Germany</option><option>Singapore</option></select></label><span>Source-linked research · No invented ratings</span></div>
-      </div><div class="examples"><span>TRY A COMPARISON</span><button type="button" data-query="Sony WH-1000XM5 vs Bose QuietComfort Ultra">Headphones <span>↗</span></button><button type="button" data-query="Kindle Paperwhite vs Kobo Clara BW">E-readers <span>↗</span></button><button type="button" data-query="Dyson V12 Detect Slim vs Samsung Jet 75">Vacuum cleaners <span>↗</span></button></div>
+      <div class="search-options"><label>Shopping in <select id="country" aria-label="Shopping country"><option>India</option><option>United States</option><option>United Kingdom</option><option>Saudi Arabia</option><option>United Arab Emirates</option><option>Canada</option><option>Australia</option><option>Germany</option><option>Singapore</option></select></label><span></span></div>
+      </div><div class="examples"><span>Try:</span><button type="button" data-query="Sony WH-1000XM5 vs Bose QuietComfort Ultra">Headphones <span>↗</span></button><button type="button" data-query="Kindle Paperwhite vs Kobo Clara BW">E-readers <span>↗</span></button><button type="button" data-query="Dyson V12 Detect Slim vs Samsung Jet 75">Vacuum cleaners <span>↗</span></button></div>
     </section>
 
-    <section class="loading-panel" id="loadingPanel" hidden aria-live="polite" aria-label="Research progress"><div class="orbit" aria-hidden="true"></div><div><span class="eyebrow">YOUR RESEARCH IS UNDERWAY</span><h2>We’re connecting the dots.</h2><p>Finding product pages, checking the details, and putting the tradeoffs side by side. This can take up to three minutes.</p><p class="loading-note" id="loadingNote">Researching the products you named…</p><button class="text-button" id="cancelResearch" type="button">Cancel comparison</button></div></section>
+    <section class="loading-panel" id="loadingPanel" hidden aria-live="polite" aria-label="Research progress"><div class="orbit" aria-hidden="true"></div><div><span class="eyebrow"></span><h2>Finding products & prices…</h2><p>Usually takes 1–3 minutes.</p><p class="loading-note" id="loadingNote">Researching the products you named…</p><button class="text-button" id="cancelResearch" type="button">Cancel comparison</button></div></section>
     <div class="error-panel" id="errorPanel" hidden role="alert"><strong id="errorTitle">We couldn’t finish that comparison.</strong><p id="errorMessage"></p></div>
     <section id="results" hidden aria-label="Product comparison" tabindex="-1"></section>
 
-    <section class="how-it-works" id="howItWorks"><div class="section-label">LESS TAB HOPPING.<br>MORE CERTAINTY.</div><div class="step"><span>01 / DISCOVER</span><h3>The web, researched.</h3><p>Relevant product pages and reviews, found automatically across the web.</p></div><div class="step"><span>02 / COMPARE</span><h3>The details, made useful.</h3><p>Meaningful differences for the category, with missing information called out.</p></div><div class="step"><span>03 / DECIDE</span><h3>A choice you can explain.</h3><p>A recommendation with tradeoffs and sources you can open for yourself.</p></div></section>
-    <footer><span>sidebyside. <span class="muted">Built for the in-between decisions.</span></span><span>AI-assisted research. Sources included.</span></footer>
+    <footer><span>sidebyside. <span class="muted"></span></span><span>Prices checked when you compare.</span></footer>
   </main>
 
 </body>
